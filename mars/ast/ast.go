@@ -36,6 +36,12 @@ type VarDecl struct {
 	Value     Expression
 }
 
+// AssignmentStatement represents mutable variable assignment
+type AssignmentStatement struct {
+	Name  *Identifier
+	Value Expression
+}
+
 // FuncDecl represents a function declaration
 type FuncDecl struct {
 	Name       *Identifier
@@ -81,9 +87,9 @@ type IfStatement struct {
 
 // ForStatement represents a for statement
 type ForStatement struct {
-	Init      Declaration
+	Init      Statement
 	Condition Expression
-	Post      Expression
+	Post      Statement
 	Body      *BlockStatement
 }
 
@@ -153,9 +159,21 @@ type UnaryExpression struct {
 
 // Literal represents a literal value
 type Literal struct {
-	Type  string // "number", "string", "boolean", "nil"
+	Token string
 	Value interface{}
 }
+
+// MemberExpression represents a member access expression (e.g., foo.bar)
+type MemberExpression struct {
+	Object   Expression
+	Property *Identifier
+}
+
+// BreakStatement represents a break statement
+type BreakStatement struct{}
+
+// ContinueStatement represents a continue statement
+type ContinueStatement struct{}
 
 // TokenLiteral implementations
 func (p *Program) TokenLiteral() string {
@@ -166,6 +184,7 @@ func (p *Program) TokenLiteral() string {
 }
 
 func (vd *VarDecl) TokenLiteral() string             { return vd.Name.TokenLiteral() }
+func (as *AssignmentStatement) TokenLiteral() string { return "=" }
 func (fd *FuncDecl) TokenLiteral() string            { return fd.Name.TokenLiteral() }
 func (sd *StructDecl) TokenLiteral() string          { return sd.Name.TokenLiteral() }
 func (ub *UnsafeBlock) TokenLiteral() string         { return "unsafe" }
@@ -176,16 +195,33 @@ func (ps *PrintStatement) TokenLiteral() string      { return "log" }
 func (rs *ReturnStatement) TokenLiteral() string     { return "return" }
 func (es *ExpressionStatement) TokenLiteral() string { return es.Expression.TokenLiteral() }
 func (i *Identifier) TokenLiteral() string           { return i.Name }
-func (t *Type) TokenLiteral() string                 { return t.BaseType }
-func (al *ArrayLiteral) TokenLiteral() string        { return "[" }
-func (sl *StructLiteral) TokenLiteral() string       { return sl.Type.TokenLiteral() }
-func (fc *FunctionCall) TokenLiteral() string        { return fc.Function.TokenLiteral() }
-func (be *BinaryExpression) TokenLiteral() string    { return be.Left.TokenLiteral() }
-func (ue *UnaryExpression) TokenLiteral() string     { return ue.Operator }
-func (l *Literal) TokenLiteral() string              { return l.Type }
+func (me *MemberExpression) TokenLiteral() string    { return me.Object.TokenLiteral() }
+func (bs *BreakStatement) TokenLiteral() string      { return "break" }
+func (cs *ContinueStatement) TokenLiteral() string   { return "continue" }
+
+func (t *Type) TokenLiteral() string {
+	if t.ArrayType != nil {
+		return "[]" + t.ArrayType.TokenLiteral()
+	}
+	if t.PointerType != nil {
+		return "*" + t.PointerType.TokenLiteral()
+	}
+	if t.StructType != nil {
+		return t.StructType.TokenLiteral()
+	}
+	return t.BaseType
+}
+
+func (al *ArrayLiteral) TokenLiteral() string     { return "[" }
+func (sl *StructLiteral) TokenLiteral() string    { return sl.Type.TokenLiteral() }
+func (fc *FunctionCall) TokenLiteral() string     { return fc.Function.TokenLiteral() }
+func (be *BinaryExpression) TokenLiteral() string { return be.Operator }
+func (ue *UnaryExpression) TokenLiteral() string  { return ue.Operator }
+func (l *Literal) TokenLiteral() string           { return l.Token }
 
 // Node type implementations
 func (vd *VarDecl) declarationNode()           {}
+func (as *AssignmentStatement) statementNode() {}
 func (fd *FuncDecl) declarationNode()          {}
 func (sd *StructDecl) declarationNode()        {}
 func (ub *UnsafeBlock) declarationNode()       {}
@@ -195,7 +231,10 @@ func (fs *ForStatement) statementNode()        {}
 func (ps *PrintStatement) statementNode()      {}
 func (rs *ReturnStatement) statementNode()     {}
 func (es *ExpressionStatement) statementNode() {}
+func (bs *BreakStatement) statementNode()      {}
+func (cs *ContinueStatement) statementNode()   {}
 func (i *Identifier) expressionNode()          {}
+func (me *MemberExpression) expressionNode()   {}
 func (al *ArrayLiteral) expressionNode()       {}
 func (sl *StructLiteral) expressionNode()      {}
 func (fc *FunctionCall) expressionNode()       {}
