@@ -83,7 +83,7 @@ func TestNextToken(t *testing.T) {
 		{IDENT, "var", 18, 4},
 		{IDENT, "p", 18, 8},
 		{COLON, ":", 18, 9},
-		{STAR, "*", 18, 11},
+		{ASTERISK, "*", 18, 11},
 		{IDENT, "Point", 18, 12},
 		{SEMICOLON, ";", 18, 17},
 		{RBRACE, "}", 19, 3},
