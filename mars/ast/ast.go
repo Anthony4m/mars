@@ -1,14 +1,26 @@
+// ast/ast.go
 package ast
 
 // Node represents a node in the AST
+// Pos returns line and column for error reporting (optional)
 type Node interface {
 	TokenLiteral() string
 }
 
-// Statement represents a statement node in the AST
+// Declaration represents a declaration or top-level statement
+// (grammar: declaration = varDecl | funcDecl | unsafeBlock | statement)
+type Declaration interface {
+	Node
+	declarationNode()
+}
+
+// Statement represents a statement node
+// Statement nodes also satisfy Declaration at top level
 type Statement interface {
 	Node
 	statementNode()
+	// implement declarationNode to allow top-level statements
+	declarationNode()
 }
 
 // Expression represents an expression node in the AST
@@ -17,23 +29,18 @@ type Expression interface {
 	expressionNode()
 }
 
-// Program represents the root node of the AST
+// Program is the root node of the AST
+// It contains both declarations and top-level statements
 type Program struct {
 	Declarations []Declaration
 }
 
-// Declaration represents a declaration node in the AST
-type Declaration interface {
-	Node
-	declarationNode()
-}
-
 // VarDecl represents a variable declaration
 type VarDecl struct {
-	IsMutable bool
-	Name      *Identifier
-	Type      *Type
-	Value     Expression
+	Mutable bool
+	Name    *Identifier
+	Type    *Type
+	Value   Expression
 }
 
 // AssignmentStatement represents mutable variable assignment
@@ -80,9 +87,9 @@ type BlockStatement struct {
 
 // IfStatement represents an if statement
 type IfStatement struct {
-	Condition Expression
-	Then      *BlockStatement
-	Else      *BlockStatement
+	Condition   Expression
+	Consequence *BlockStatement
+	Alternative *BlockStatement
 }
 
 // ForStatement represents a for statement
@@ -93,7 +100,7 @@ type ForStatement struct {
 	Body      *BlockStatement
 }
 
-// PrintStatement represents a print statement
+// PrintStatement represents a print/log statement
 type PrintStatement struct {
 	Expression Expression
 }
@@ -114,6 +121,7 @@ type Identifier struct {
 }
 
 // Type represents a type
+// Supports primitives, arrays, pointers, and structs
 type Type struct {
 	BaseType    string
 	ArrayType   *Type
@@ -121,7 +129,7 @@ type Type struct {
 	PointerType *Type
 }
 
-// ArrayLiteral represents an array literal
+// ArrayLiteral represents an array or slice literal
 type ArrayLiteral struct {
 	Elements []Expression
 }
@@ -138,42 +146,53 @@ type FieldInit struct {
 	Value Expression
 }
 
-// FunctionCall represents a function call
+// FunctionCall represents a function or method call
 type FunctionCall struct {
 	Function  Expression
 	Arguments []Expression
 }
 
-// BinaryExpression represents a binary expression
+// BinaryExpression represents a binary operation
 type BinaryExpression struct {
 	Left     Expression
 	Operator string
 	Right    Expression
 }
 
-// UnaryExpression represents a unary expression
+// UnaryExpression represents a unary operation
 type UnaryExpression struct {
 	Operator string
 	Right    Expression
 }
 
-// Literal represents a literal value
+// Literal represents a literal value (number, string, boolean, nil)
 type Literal struct {
 	Token string
 	Value interface{}
 }
 
-// MemberExpression represents a member access expression (e.g., foo.bar)
+// MemberExpression represents object.member access
 type MemberExpression struct {
 	Object   Expression
 	Property *Identifier
 }
 
-// BreakStatement represents a break statement
+// BreakStatement represents a break within loops
 type BreakStatement struct{}
 
-// ContinueStatement represents a continue statement
+// ContinueStatement represents a continue within loops
 type ContinueStatement struct{}
+
+// IndexExpression represents array indexing (a[i])
+type IndexExpression struct {
+	Object Expression
+	Index  Expression
+}
+
+// NumberLiteral represents a numeric literal
+type NumberLiteral struct {
+	Value string
+}
 
 // TokenLiteral implementations
 func (p *Program) TokenLiteral() string {
@@ -182,7 +201,6 @@ func (p *Program) TokenLiteral() string {
 	}
 	return ""
 }
-
 func (vd *VarDecl) TokenLiteral() string             { return vd.Name.TokenLiteral() }
 func (as *AssignmentStatement) TokenLiteral() string { return "=" }
 func (fd *FuncDecl) TokenLiteral() string            { return fd.Name.TokenLiteral() }
@@ -195,10 +213,16 @@ func (ps *PrintStatement) TokenLiteral() string      { return "log" }
 func (rs *ReturnStatement) TokenLiteral() string     { return "return" }
 func (es *ExpressionStatement) TokenLiteral() string { return es.Expression.TokenLiteral() }
 func (i *Identifier) TokenLiteral() string           { return i.Name }
+func (al *ArrayLiteral) TokenLiteral() string        { return "[" }
+func (sl *StructLiteral) TokenLiteral() string       { return sl.Type.TokenLiteral() }
+func (fc *FunctionCall) TokenLiteral() string        { return fc.Function.TokenLiteral() }
+func (be *BinaryExpression) TokenLiteral() string    { return be.Operator }
+func (ue *UnaryExpression) TokenLiteral() string     { return ue.Operator }
+func (l *Literal) TokenLiteral() string              { return l.Token }
 func (me *MemberExpression) TokenLiteral() string    { return me.Object.TokenLiteral() }
 func (bs *BreakStatement) TokenLiteral() string      { return "break" }
 func (cs *ContinueStatement) TokenLiteral() string   { return "continue" }
-
+func (ie *IndexExpression) TokenLiteral() string     { return "[" }
 func (t *Type) TokenLiteral() string {
 	if t.ArrayType != nil {
 		return "[]" + t.ArrayType.TokenLiteral()
@@ -211,33 +235,39 @@ func (t *Type) TokenLiteral() string {
 	}
 	return t.BaseType
 }
-
-func (al *ArrayLiteral) TokenLiteral() string     { return "[" }
-func (sl *StructLiteral) TokenLiteral() string    { return sl.Type.TokenLiteral() }
-func (fc *FunctionCall) TokenLiteral() string     { return fc.Function.TokenLiteral() }
-func (be *BinaryExpression) TokenLiteral() string { return be.Operator }
-func (ue *UnaryExpression) TokenLiteral() string  { return ue.Operator }
-func (l *Literal) TokenLiteral() string           { return l.Token }
+func (n *NumberLiteral) TokenLiteral() string { return n.Value }
 
 // Node type implementations
-func (vd *VarDecl) declarationNode()           {}
-func (as *AssignmentStatement) statementNode() {}
-func (fd *FuncDecl) declarationNode()          {}
-func (sd *StructDecl) declarationNode()        {}
-func (ub *UnsafeBlock) declarationNode()       {}
-func (bs *BlockStatement) statementNode()      {}
-func (is *IfStatement) statementNode()         {}
-func (fs *ForStatement) statementNode()        {}
-func (ps *PrintStatement) statementNode()      {}
-func (rs *ReturnStatement) statementNode()     {}
-func (es *ExpressionStatement) statementNode() {}
-func (bs *BreakStatement) statementNode()      {}
-func (cs *ContinueStatement) statementNode()   {}
-func (i *Identifier) expressionNode()          {}
-func (me *MemberExpression) expressionNode()   {}
-func (al *ArrayLiteral) expressionNode()       {}
-func (sl *StructLiteral) expressionNode()      {}
-func (fc *FunctionCall) expressionNode()       {}
-func (be *BinaryExpression) expressionNode()   {}
-func (ue *UnaryExpression) expressionNode()    {}
-func (l *Literal) expressionNode()             {}
+func (vd *VarDecl) declarationNode()             {}
+func (vd *VarDecl) statementNode()               {}
+func (as *AssignmentStatement) statementNode()   {}
+func (as *AssignmentStatement) declarationNode() {}
+func (fd *FuncDecl) declarationNode()            {}
+func (sd *StructDecl) declarationNode()          {}
+func (ub *UnsafeBlock) declarationNode()         {}
+func (bs *BlockStatement) statementNode()        {}
+func (bs *BlockStatement) declarationNode()      {}
+func (is *IfStatement) statementNode()           {}
+func (is *IfStatement) declarationNode()         {}
+func (fs *ForStatement) statementNode()          {}
+func (fs *ForStatement) declarationNode()        {}
+func (ps *PrintStatement) statementNode()        {}
+func (ps *PrintStatement) declarationNode()      {}
+func (rs *ReturnStatement) statementNode()       {}
+func (rs *ReturnStatement) declarationNode()     {}
+func (es *ExpressionStatement) statementNode()   {}
+func (es *ExpressionStatement) declarationNode() {}
+func (i *Identifier) expressionNode()            {}
+func (al *ArrayLiteral) expressionNode()         {}
+func (sl *StructLiteral) expressionNode()        {}
+func (fc *FunctionCall) expressionNode()         {}
+func (be *BinaryExpression) expressionNode()     {}
+func (ue *UnaryExpression) expressionNode()      {}
+func (l *Literal) expressionNode()               {}
+func (me *MemberExpression) expressionNode()     {}
+func (bs *BreakStatement) statementNode()        {}
+func (bs *BreakStatement) declarationNode()      {}
+func (cs *ContinueStatement) statementNode()     {}
+func (cs *ContinueStatement) declarationNode()   {}
+func (ie *IndexExpression) expressionNode()      {}
+func (n *NumberLiteral) expressionNode()         {}
