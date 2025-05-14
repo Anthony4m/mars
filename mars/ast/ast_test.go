@@ -8,10 +8,10 @@ func TestProgramString(t *testing.T) {
 	program := &Program{
 		Declarations: []Declaration{
 			&VarDecl{
-				IsMutable: true,
-				Name:      &Identifier{Name: "x"},
-				Type:      &Type{BaseType: "int"},
-				Value:     &Literal{Token: "42", Value: 42},
+				Mutable: true,
+				Name:    &Identifier{Name: "x"},
+				Type:    &Type{BaseType: "int"},
+				Value:   &Literal{Token: "42", Value: 42},
 			},
 			&FuncDecl{
 				Name: &Identifier{Name: "add"},
@@ -61,10 +61,10 @@ func TestProgramString(t *testing.T) {
 
 func TestVarDeclString(t *testing.T) {
 	decl := &VarDecl{
-		IsMutable: true,
-		Name:      &Identifier{Name: "x"},
-		Type:      &Type{BaseType: "int"},
-		Value:     &Literal{Token: "42", Value: 42},
+		Mutable: true,
+		Name:    &Identifier{Name: "x"},
+		Type:    &Type{BaseType: "int"},
+		Value:   &Literal{Token: "42", Value: 42},
 	}
 
 	if decl.TokenLiteral() != "x" {
