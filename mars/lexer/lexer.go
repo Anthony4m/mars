@@ -156,7 +156,7 @@ func (l *Lexer) NextToken() Token {
 		l.readChar()
 		return tok
 	case '*':
-		tok.Type = STAR
+		tok.Type = ASTERISK
 		tok.Literal = string(l.ch)
 		l.readChar()
 		return tok
@@ -353,4 +353,17 @@ func (l *Lexer) readBlockComment() string {
 	}
 
 	return l.input[position:l.position]
+}
+
+// Tokens returns all tokens from the input
+func (l *Lexer) Tokens() []Token {
+	var tokens []Token
+	for {
+		tok := l.NextToken()
+		tokens = append(tokens, tok)
+		if tok.Type == EOF {
+			break
+		}
+	}
+	return tokens
 }
