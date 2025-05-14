@@ -27,24 +27,26 @@ const (
 	TRUE
 	FALSE
 	NIL
+	BREAK
+	CONTINUE
 
 	// Operators
-	PLUS    // +
-	MINUS   // -
-	STAR    // *
-	SLASH   // /
-	PERCENT // %
-	BANG    // !
-	EQ      // =
-	COLONEQ // :=
-	EQEQ    // ==
-	BANGEQ  // !=
-	LT      // <
-	LTEQ    // <=
-	GT      // >
-	GTEQ    // >=
-	AND     // &&
-	OR      // ||
+	PLUS     // +
+	MINUS    // -
+	ASTERISK // *
+	SLASH    // /
+	PERCENT  // %
+	BANG     // !
+	EQ       // =
+	COLONEQ  // :=
+	EQEQ     // ==
+	BANGEQ   // !=
+	LT       // <
+	LTEQ     // <=
+	GT       // >
+	GTEQ     // >=
+	AND      // &&
+	OR       // ||
 
 	// Delimiters
 	LPAREN    // (
