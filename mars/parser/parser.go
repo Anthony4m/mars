@@ -226,57 +226,67 @@ func (p *parser) parseFuncDecl() ast.Declaration {
 }
 
 // func anotherFunc(a :int, b :int, c :int)
-func (p *parser) parseParameterList() []*ast.Identifier {
-	parameters := []*ast.Identifier{}
+func (p *parser) parseParameterList() []*ast.ParameterNode {
+	parameters := []*ast.ParameterNode{}
 
-	// Handle empty parameter list
+	// Handle empty parameter list: if current token is RPAREN, e.g. foo()
 	if p.currentTokenIs(lexer.RPAREN) {
 		return parameters
 	}
 
-	// Your proposed snippet for parsing one parameter like "a : int"
-	// Assuming 'a' is an IDENT, ':' is COLON, and 'int' is an IDENT for this analysis.
+	// Parse the first parameter
+	var paramNameNode *ast.Identifier
+	var paramTypeNode ast.TypeNode
 
-	if p.currentTokenIs(lexer.IDENT) { // Checks for 'a'
-		// Let's say current token is 'a'. This condition is TRUE.
-		// paramNameToken := p.curToken // << YOU WOULD NORMALLY CAPTURE 'a' HERE
-		p.nextToken() // Consumes 'a'. Current token is now ':'.
-		// !!! Problem: 'a' is now gone from p.curToken, not stored yet.
-
-		if p.currentTokenIs(lexer.COLON) { // Checks for ':'
-			// Current token is ':'. This condition is TRUE.
-			p.nextToken() // Consumes ':'. Current token is now 'int'.
-
-			if p.currentTokenIs(lexer.IDENT) { // Checks for 'int' (assuming 'int' is lexed as IDENT)
-				// Current token is 'int'. This condition is TRUE.
-				// paramTypeToken := p.curToken // << YOU WOULD NORMALLY CAPTURE 'int' HERE
-				p.nextToken() // Consumes 'int'. Current token is now whatever is *after* 'int'
-				// (e.g., a comma ',', or a closing parenthesis ')').
-				// !!! Problem: 'int' is now gone from p.curToken, not stored yet.
-
-				// This is the line you're concerned about for constructing the parameter:
-				parameters = append(parameters, p.parseIdentifier())
-				// AT THIS POINT:
-				// - 'a' was consumed and its value wasn't explicitly saved.
-				// - ':' was consumed.
-				// - 'int' was consumed and its value wasn't explicitly saved.
-				// - p.curToken is now the token *AFTER* 'int'.
-				// So, p.parseIdentifier() here will try to parse an identifier from the token
-				// that comes *after* "int" (e.g., it might try to parse "," or ")", which would fail).
-				// It will NOT parse 'a' or 'int' as those have already been skipped by p.nextToken().
-			}
-		}
+	// 1. Parse the parameter name (IDENT)
+	if !p.currentTokenIs(lexer.IDENT) {
+		p.recordError(fmt.Sprintf("SyntaxError: Expected parameter name (identifier), got %v at line %d, column %d. Violated rule: <FUNC_PARAM_NAME>", p.curToken.Type, p.curToken.Line, p.curToken.Column))
+		return parameters // Return to allow parser to potentially recover or hit RPAREN expectation
 	}
+	paramNameNode = p.parseIdentifier() // Consumes IDENT
 
-	// Parse remaining parameters
+	// 2. Expect and consume COLON (:)
+	if !p.currentTokenIs(lexer.COLON) {
+		p.recordError(fmt.Sprintf("SyntaxError: Expected ':' after parameter name '%s', got %v at line %d, column %d. Violated rule: <FUNC_PARAM_COLON>", paramNameNode.Name, p.curToken.Type, p.curToken.Line, p.curToken.Column))
+		return parameters
+	}
+	p.nextToken() // Consume COLON
+
+	// 3. Parse the Type (currently an IDENT, e.g., 'int')
+	if !p.currentTokenIs(lexer.IDENT) {
+		p.recordError(fmt.Sprintf("SyntaxError: Expected parameter type (identifier) after ':', got %v at line %d, column %d. Violated rule: <FUNC_PARAM_TYPE>", p.curToken.Type, p.curToken.Line, p.curToken.Column))
+		return parameters
+	}
+	tempTypeIdent := p.parseIdentifier() // Consumes type IDENT
+	paramTypeNode = tempTypeIdent        // ast.Identifier implements ast.TypeNode
+
+	parameters = append(parameters, &ast.ParameterNode{Name: paramNameNode, Type: paramTypeNode})
+
+	// Loop for subsequent parameters, e.g. (a:int, b:string)
 	for p.currentTokenIs(lexer.COMMA) {
-		p.nextToken()                      // Skip comma
-		if p.currentTokenIs(lexer.IDENT) { // int
-			p.nextToken()                      // Skip type
-			if p.currentTokenIs(lexer.IDENT) { // b/c
-				parameters = append(parameters, p.parseIdentifier())
-			}
+		p.nextToken() // Consume COMMA
+
+		// After a comma, another full parameter declaration is expected.
+		if !p.currentTokenIs(lexer.IDENT) {
+			p.recordError(fmt.Sprintf("SyntaxError: Expected parameter name (identifier) after comma, got %v at line %d, column %d. Violated rule: <FUNC_PARAM_NAME_AFTER_COMMA>", p.curToken.Type, p.curToken.Line, p.curToken.Column))
+			return parameters // Syntax error
 		}
+		paramNameNode = p.parseIdentifier()
+
+		if !p.currentTokenIs(lexer.COLON) {
+			p.recordError(fmt.Sprintf("SyntaxError: Expected ':' after parameter name '%s', got %v at line %d, column %d. Violated rule: <FUNC_PARAM_COLON>", paramNameNode.Name, p.curToken.Type, p.curToken.Line, p.curToken.Column))
+			return parameters
+		}
+		p.nextToken() // Consume COLON
+
+		if !p.currentTokenIs(lexer.IDENT) {
+			p.recordError(fmt.Sprintf("SyntaxError: Expected parameter type (identifier) after ':', got %v at line %d, column %d. Violated rule: <FUNC_PARAM_TYPE>", p.curToken.Type, p.curToken.Line, p.curToken.Column))
+			return parameters
+		}
+		tempTypeIdent = p.parseIdentifier()
+		paramTypeNode = tempTypeIdent
+
+		parameters = append(parameters, &ast.ParameterNode{Name: paramNameNode, Type: paramTypeNode})
 	}
 
 	return parameters
