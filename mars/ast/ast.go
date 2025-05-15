@@ -1,10 +1,19 @@
 // ast/ast.go
 package ast
 
-// Node represents a node in the AST
-// Pos returns line and column for error reporting (optional)
+import "bytes"
+
+// Node represents a node in the Abstract Syntax Tree.
 type Node interface {
 	TokenLiteral() string
+	String() string
+}
+
+// TypeNode represents a type node in the AST.
+// It's an interface to allow for different kinds of type representations (e.g., simple identifiers, slice types, pointer types).
+type TypeNode interface {
+	Node
+	typeNode() // marker method
 }
 
 // Declaration represents a declaration or top-level statement
@@ -14,7 +23,7 @@ type Declaration interface {
 	declarationNode()
 }
 
-// Statement represents a statement node
+// Statement represents a statement node in the AST.
 // Statement nodes also satisfy Declaration at top level
 type Statement interface {
 	Node
@@ -201,28 +210,163 @@ func (p *Program) TokenLiteral() string {
 	}
 	return ""
 }
-func (vd *VarDecl) TokenLiteral() string             { return vd.Name.TokenLiteral() }
+
+func (p *Program) String() string {
+	var out bytes.Buffer
+	for _, s := range p.Declarations {
+		out.WriteString(s.String())
+	}
+	return out.String()
+}
+
+// In your ast package:
+type ParameterNode struct {
+	// NodeImpl // If you have a base AST node interface/struct
+	Name *Identifier
+	Type TypeNode // ast.TypeNode could be an interface, or *Identifier if types are simple
+}
+
+func (vd *VarDecl) TokenLiteral() string { return vd.Name.TokenLiteral() }
+func (vd *VarDecl) String() string {
+	var out bytes.Buffer
+	if vd.Mutable {
+		out.WriteString("mut ")
+	} else {
+		out.WriteString("var ")
+	}
+	out.WriteString(vd.Name.String())
+	if vd.Type != nil {
+		out.WriteString(" : ")
+		out.WriteString(vd.Type.String())
+	}
+	if vd.Value != nil {
+		out.WriteString(" = ")
+		out.WriteString(vd.Value.String())
+	}
+	return out.String()
+}
+
 func (as *AssignmentStatement) TokenLiteral() string { return "=" }
-func (fd *FuncDecl) TokenLiteral() string            { return fd.Name.TokenLiteral() }
-func (sd *StructDecl) TokenLiteral() string          { return sd.Name.TokenLiteral() }
-func (ub *UnsafeBlock) TokenLiteral() string         { return "unsafe" }
-func (bs *BlockStatement) TokenLiteral() string      { return "{" }
-func (is *IfStatement) TokenLiteral() string         { return "if" }
-func (fs *ForStatement) TokenLiteral() string        { return "for" }
-func (ps *PrintStatement) TokenLiteral() string      { return "log" }
-func (rs *ReturnStatement) TokenLiteral() string     { return "return" }
+func (as *AssignmentStatement) String() string {
+	// Placeholder, can be more detailed
+	return as.Name.String() + " = ..."
+}
+
+func (fd *FuncDecl) TokenLiteral() string { return fd.Name.TokenLiteral() }
+func (fd *FuncDecl) String() string {
+	// Placeholder, can be more detailed
+	return "func " + fd.Name.String() + "()"
+}
+
+func (sd *StructDecl) TokenLiteral() string { return sd.Name.TokenLiteral() }
+func (sd *StructDecl) String() string {
+	// Placeholder
+	return "struct " + sd.Name.String() + " {}"
+}
+
+func (ub *UnsafeBlock) TokenLiteral() string { return "unsafe" }
+func (ub *UnsafeBlock) String() string {
+	// Placeholder
+	return "unsafe {}"
+}
+
+func (bs *BlockStatement) TokenLiteral() string { return "{" }
+func (bs *BlockStatement) String() string {
+	// Placeholder
+	return "{ ... }"
+}
+
+func (is *IfStatement) TokenLiteral() string { return "if" }
+func (is *IfStatement) String() string {
+	// Placeholder
+	return "if (...) { ... }"
+}
+
+func (fs *ForStatement) TokenLiteral() string { return "for" }
+func (fs *ForStatement) String() string {
+	// Placeholder
+	return "for { ... }"
+}
+
+func (ps *PrintStatement) TokenLiteral() string { return "log" }
+func (ps *PrintStatement) String() string {
+	// Placeholder
+	return "log(...)"
+}
+
+func (rs *ReturnStatement) TokenLiteral() string { return "return" }
+func (rs *ReturnStatement) String() string {
+	// Placeholder
+	return "return ..."
+}
+
 func (es *ExpressionStatement) TokenLiteral() string { return es.Expression.TokenLiteral() }
-func (i *Identifier) TokenLiteral() string           { return i.Name }
-func (al *ArrayLiteral) TokenLiteral() string        { return "[" }
-func (sl *StructLiteral) TokenLiteral() string       { return sl.Type.TokenLiteral() }
-func (fc *FunctionCall) TokenLiteral() string        { return fc.Function.TokenLiteral() }
-func (be *BinaryExpression) TokenLiteral() string    { return be.Operator }
-func (ue *UnaryExpression) TokenLiteral() string     { return ue.Operator }
-func (l *Literal) TokenLiteral() string              { return l.Token }
-func (me *MemberExpression) TokenLiteral() string    { return me.Object.TokenLiteral() }
-func (bs *BreakStatement) TokenLiteral() string      { return "break" }
-func (cs *ContinueStatement) TokenLiteral() string   { return "continue" }
-func (ie *IndexExpression) TokenLiteral() string     { return "[" }
+func (es *ExpressionStatement) String() string {
+	if es.Expression != nil {
+		return es.Expression.String()
+	}
+	return ""
+}
+
+func (i *Identifier) TokenLiteral() string    { return i.Name }
+func (i *Identifier) String() string          { return i.Name }
+func (i *Identifier) typeNode()               {}
+func (al *ArrayLiteral) TokenLiteral() string { return "[" }
+func (al *ArrayLiteral) String() string {
+	// Placeholder
+	return "[...]"
+}
+
+func (sl *StructLiteral) TokenLiteral() string { return sl.Type.TokenLiteral() }
+func (sl *StructLiteral) String() string {
+	// Placeholder
+	return sl.Type.String() + "{...}"
+}
+
+func (fc *FunctionCall) TokenLiteral() string { return fc.Function.TokenLiteral() }
+func (fc *FunctionCall) String() string {
+	// Placeholder
+	return fc.Function.String() + "(...)"
+}
+
+func (be *BinaryExpression) TokenLiteral() string { return be.Operator }
+func (be *BinaryExpression) String() string {
+	var out bytes.Buffer
+	out.WriteString("(")
+	out.WriteString(be.Left.String())
+	out.WriteString(" " + be.Operator + " ")
+	out.WriteString(be.Right.String())
+	out.WriteString(")")
+	return out.String()
+}
+
+func (ue *UnaryExpression) TokenLiteral() string { return ue.Operator }
+func (ue *UnaryExpression) String() string {
+	// Placeholder
+	return ue.Operator + "(...)"
+}
+
+func (l *Literal) TokenLiteral() string { return l.Token }
+func (l *Literal) String() string       { return l.Token }
+
+func (me *MemberExpression) TokenLiteral() string { return me.Object.TokenLiteral() }
+func (me *MemberExpression) String() string {
+	// Placeholder
+	return me.Object.String() + "." + me.Property.String()
+}
+
+func (bs *BreakStatement) TokenLiteral() string { return "break" }
+func (bs *BreakStatement) String() string       { return "break" }
+
+func (cs *ContinueStatement) TokenLiteral() string { return "continue" }
+func (cs *ContinueStatement) String() string       { return "continue" }
+
+func (ie *IndexExpression) TokenLiteral() string { return "[" }
+func (ie *IndexExpression) String() string {
+	// Placeholder
+	return "(...)[...]"
+}
+
 func (t *Type) TokenLiteral() string {
 	if t.ArrayType != nil {
 		return "[]" + t.ArrayType.TokenLiteral()
@@ -235,7 +379,14 @@ func (t *Type) TokenLiteral() string {
 	}
 	return t.BaseType
 }
+
+func (t *Type) String() string {
+	// This makes Type satisfy the Node interface if needed as part of TypeNode.
+	return t.TokenLiteral()
+}
+
 func (n *NumberLiteral) TokenLiteral() string { return n.Value }
+func (n *NumberLiteral) String() string       { return n.Value }
 
 // Node type implementations
 func (vd *VarDecl) declarationNode()             {}
