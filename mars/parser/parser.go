@@ -2,6 +2,7 @@
 package parser
 
 import (
+	"fmt"
 	"mars/ast"
 	"mars/lexer"
 )
@@ -10,13 +11,18 @@ type parser struct {
 	lexer     *lexer.Lexer
 	curToken  lexer.Token
 	peekToken lexer.Token
+	errors    []string
 }
 
 func NewParser(lexer *lexer.Lexer) *parser {
-	p := &parser{lexer: lexer}
+	p := &parser{lexer: lexer, errors: []string{}}
 	p.nextToken()
 	p.nextToken()
 	return p
+}
+
+func (p *parser) recordError(message string) {
+	p.errors = append(p.errors, message)
 }
 
 func (p *parser) nextToken() {
@@ -51,6 +57,7 @@ func (p *parser) parseDeclaration() ast.Declaration {
 	}
 }
 
+// mut var_name := expression || var_name := expression
 func (p *parser) parseVarDecl() *ast.VarDecl {
 	isMutable := false
 	if p.curToken.Type == lexer.MUT {
@@ -78,8 +85,10 @@ func (p *parser) parseIdentifier() *ast.Identifier {
 
 func (p *parser) expect(t lexer.TokenType) {
 	if p.curToken.Type != t {
-		// TODO: Add proper error handling
-		panic("unexpected token")
+		msg := fmt.Sprintf("Expected token type %v but got %v at line %d, column %d",
+			t, p.curToken.Type, p.curToken.Line, p.curToken.Column)
+		p.recordError(msg)
+		return // Return early since we encountered an error
 	}
 	p.nextToken()
 }
@@ -94,42 +103,96 @@ func (p *parser) currentTokenIs(types ...lexer.TokenType) bool {
 }
 
 // Example: Parse additive expressions (+, -)
+// The main trick here is that functions handling lower precedence operators (like +, -)
+// will call functions that handle higher precedence operators (like *, /)
+// to get their operands. This naturally groups operations according to their precedence.
 func (p *parser) parseExpression() ast.Expression {
+	// Logic: In this version, it simply delegates to parseAdditive().
+	// This means that the lowest level of precedence it directly considers is addition/subtraction.
+	// If you had even lower precedence operators (e.g., logical OR, assignments if they were expressions),
+	// parseExpression might start there, or parseAdditive would be the entry if +/- were the lowest.
 	return p.parseAdditive()
 }
 
+// Logic Breakdown:
+//
+//	Rule 1: expr := p.parseMultiplicative(): Crucially, to get the first part (left operand) of an additive expression (e.g., the A in A + B), it calls parseMultiplicative(). This means anything that parseMultiplicative can parse (like X * Y or just a number Z) can be the left operand of a + or -.
+//	Rule 2 (The Loop): for p.currentTokenIs(lexer.PLUS, lexer.MINUS):
+//	    It then checks if the current token is a + or -.
+//	    If it is, it means we have an ongoing additive expression (e.g., we've parsed A and now see + B).
+//	    The loop continues as long as it finds + or - operators. This handles chains like A + B - C.
+//	Inside the Loop (Building the AST):
+//	    operator := p.curToken.Literal: Stores the operator (+ or -).
+//	    p.nextToken(): Consumes the operator token.
+//	    expr = &ast.BinaryExpression{ Left: expr, ... }: This is where the Abstract Syntax Tree (AST) node is built. The expr that was parsed so far becomes the Left child of the new BinaryExpression.
+//	    Right: p.parseMultiplicative(): Rule 3: To get the right operand (e.g., the B in A + B), it again calls parseMultiplicative(). This ensures that if you have A + B * C, B * C will be parsed by parseMultiplicative first and become a single unit (an AST node) before being made the right child of the + operation.
+//
+// Associativity: Because expr (the result of the previous operation) becomes the Left operand of the new operation, this structure naturally handles left-associativity for + and -. For example, A + B - C is parsed as (A + B) - C.
 func (p *parser) parseAdditive() ast.Expression {
-	expr := p.parseMultiplicative()
+	expr := p.parseMultiplicative() // Rule 1: Get the left operand
 
+	// Rule 2: Loop for subsequent '+' or '-' operators
 	for p.currentTokenIs(lexer.PLUS, lexer.MINUS) {
-		operator := p.curToken.Literal
-		p.nextToken()
+		operator := p.curToken.Literal // Get the operator
+		p.nextToken()                  // Consume the operator token
+		// The current 'expr' is the left side of the new BinaryExpression
+		// The right side is whatever parseMultiplicative gives us next
 		expr = &ast.BinaryExpression{
 			Left:     expr,
 			Operator: operator,
-			Right:    p.parseMultiplicative(),
+			Right:    p.parseMultiplicative(), // Rule 3: Get the right operand
 		}
 	}
-
 	return expr
 }
 
 func (p *parser) parseMultiplicative() ast.Expression {
-	expr := p.parsePrimary()
+	expr := p.parsePrimary() // Rule 1: Get the left operand
 
+	// Rule 2: Loop for subsequent '*' or '/' operators
 	for p.currentTokenIs(lexer.ASTERISK, lexer.SLASH) {
 		operator := p.curToken.Literal
 		p.nextToken()
 		expr = &ast.BinaryExpression{
 			Left:     expr,
 			Operator: operator,
-			Right:    p.parsePrimary(),
+			Right:    p.parsePrimary(), // Rule 3: Get the right operand
 		}
 	}
-
 	return expr
 }
 
+// Logic Breakdown:
+// lexer.NUMBER: If it's a number, it creates an ast.NumberLiteral node and advances the token.
+// lexer.IDENT: If it's an identifier (like a variable name), it calls p.parseIdentifier() (which should return an ast.Identifier node or similar ast.Expression).
+// lexer.LPAREN: This handles parenthesized expressions like (A + B).
+//
+//	It consumes the (.
+//	Crucially, it calls p.parseExpression() recursively. This allows an entire new expression (with its own precedence rules) to be parsed within the parentheses.
+//	It then expects a ).
+//	The AST of the inner expression is returned. This is how parentheses override the default operator precedence.
+//
+// default: If the token is none of the above, it's an unexpected token in this context. It records an error (good!) and returns nil.
+// How Precedence is Achieved (Example: A + B * C)
+//
+//	parseExpression() calls parseAdditive().
+//	parseAdditive() calls expr_left := p.parseMultiplicative() to get its first operand.
+//	parseMultiplicative() (for A): calls p.parsePrimary(). parsePrimary returns A. parseMultiplicative sees no * or / after A, so it returns A.
+//	So, expr_left in parseAdditive() is A.
+//	parseAdditive() sees the + token.
+//	It stores +.
+//	It calls expr_right := p.parseMultiplicative() to get the right operand of +.
+//	parseMultiplicative() (for B * C):
+//		Calls sub_expr_left := p.parsePrimary(). parsePrimary returns B.
+//		parseMultiplicative() sees *. Stores *.
+//		Calls sub_expr_right := p.parsePrimary(). parsePrimary returns C.
+//		parseMultiplicative() builds BinaryExpression{Left: B, Operator: "*", Right: C}.
+//		It sees no more * or / tokens. It returns the (B * C) AST node.
+//	Back in parseAdditive(), expr_right is now the AST node for (B * C).
+//	parseAdditive() builds BinaryExpression{Left: A, Operator: "+", Right: (B*C)}.
+//	No more + or - tokens. parseAdditive() returns the final AST for (A + (B * C)).
+//
+// This shows how B * C is grouped together because parseAdditive calls parseMultiplicative to get its operands, and parseMultiplicative will fully resolve its higher-precedence operations before returning.
 func (p *parser) parsePrimary() ast.Expression {
 	switch p.curToken.Type {
 	case lexer.NUMBER:
@@ -137,15 +200,16 @@ func (p *parser) parsePrimary() ast.Expression {
 		p.nextToken()
 		return lit
 	case lexer.IDENT:
-		return p.parseIdentifier()
-	case lexer.LPAREN:
-		p.nextToken()
-		expr := p.parseExpression()
-		p.expect(lexer.RPAREN)
-		return expr
+		return p.parseIdentifier() // Assumes parseIdentifier() returns an ast.Expression (e.g., ast.Identifier)
+	case lexer.LPAREN: // '('
+		p.nextToken()               // Consume '('
+		expr := p.parseExpression() // Recursively parse the inner expression
+		p.expect(lexer.RPAREN)      // Consume ')' - expect will handle error if not found
+		return expr                 // Return the AST of the inner expression
 	default:
-		// TODO: Add proper error handling
-		panic("unexpected token in primary expression")
+		// This error handling is good!
+		p.recordError(fmt.Sprintf("unexpected token in primary expression: %v", p.curToken.Type))
+		return nil
 	}
 }
 
@@ -154,11 +218,68 @@ func (p *parser) parseFuncDecl() ast.Declaration {
 	name := p.parseIdentifier()
 
 	p.expect(lexer.LPAREN)
-	// TODO: Parse parameters
+	p.parseParameterList()
 	p.expect(lexer.RPAREN)
 
 	// TODO: Parse return type and body
 	return &ast.FuncDecl{Name: name}
+}
+
+// func anotherFunc(a :int, b :int, c :int)
+func (p *parser) parseParameterList() []*ast.Identifier {
+	parameters := []*ast.Identifier{}
+
+	// Handle empty parameter list
+	if p.currentTokenIs(lexer.RPAREN) {
+		return parameters
+	}
+
+	// Your proposed snippet for parsing one parameter like "a : int"
+	// Assuming 'a' is an IDENT, ':' is COLON, and 'int' is an IDENT for this analysis.
+
+	if p.currentTokenIs(lexer.IDENT) { // Checks for 'a'
+		// Let's say current token is 'a'. This condition is TRUE.
+		// paramNameToken := p.curToken // << YOU WOULD NORMALLY CAPTURE 'a' HERE
+		p.nextToken() // Consumes 'a'. Current token is now ':'.
+		// !!! Problem: 'a' is now gone from p.curToken, not stored yet.
+
+		if p.currentTokenIs(lexer.COLON) { // Checks for ':'
+			// Current token is ':'. This condition is TRUE.
+			p.nextToken() // Consumes ':'. Current token is now 'int'.
+
+			if p.currentTokenIs(lexer.IDENT) { // Checks for 'int' (assuming 'int' is lexed as IDENT)
+				// Current token is 'int'. This condition is TRUE.
+				// paramTypeToken := p.curToken // << YOU WOULD NORMALLY CAPTURE 'int' HERE
+				p.nextToken() // Consumes 'int'. Current token is now whatever is *after* 'int'
+				// (e.g., a comma ',', or a closing parenthesis ')').
+				// !!! Problem: 'int' is now gone from p.curToken, not stored yet.
+
+				// This is the line you're concerned about for constructing the parameter:
+				parameters = append(parameters, p.parseIdentifier())
+				// AT THIS POINT:
+				// - 'a' was consumed and its value wasn't explicitly saved.
+				// - ':' was consumed.
+				// - 'int' was consumed and its value wasn't explicitly saved.
+				// - p.curToken is now the token *AFTER* 'int'.
+				// So, p.parseIdentifier() here will try to parse an identifier from the token
+				// that comes *after* "int" (e.g., it might try to parse "," or ")", which would fail).
+				// It will NOT parse 'a' or 'int' as those have already been skipped by p.nextToken().
+			}
+		}
+	}
+
+	// Parse remaining parameters
+	for p.currentTokenIs(lexer.COMMA) {
+		p.nextToken()                      // Skip comma
+		if p.currentTokenIs(lexer.IDENT) { // int
+			p.nextToken()                      // Skip type
+			if p.currentTokenIs(lexer.IDENT) { // b/c
+				parameters = append(parameters, p.parseIdentifier())
+			}
+		}
+	}
+
+	return parameters
 }
 
 func (p *parser) parseStructDecl() ast.Declaration {
