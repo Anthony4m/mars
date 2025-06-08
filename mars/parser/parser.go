@@ -2,15 +2,16 @@
 package parser
 
 import (
-	"fmt"
 	"mars/ast"
 	"mars/lexer"
+	"strconv"
 )
 
 type parser struct {
 	lexer     *lexer.Lexer
 	curToken  lexer.Token
 	peekToken lexer.Token
+	prevToken lexer.Token
 	errors    []string
 }
 
@@ -26,298 +27,387 @@ func (p *parser) recordError(message string) {
 }
 
 func (p *parser) nextToken() {
+	p.prevToken = p.curToken
 	p.curToken = p.peekToken
 	p.peekToken = p.lexer.NextToken()
 }
 
+func (p *parser) previousToken() lexer.Token {
+	return p.prevToken
+}
+
+// ParseProgram is the main entry point for parsing.
+// It creates the root Program node and parses all statements until EOF.
 func (p *parser) ParseProgram() *ast.Program {
 	program := &ast.Program{}
 
-	for p.curToken.Type != lexer.EOF {
-		decl := p.parseDeclaration()
-		if decl != nil {
-			program.Declarations = append(program.Declarations, decl)
+	for !p.isAtEnd() {
+		stmt := p.parseStatement()
+		if stmt != nil {
+			program.Declarations = append(program.Declarations, stmt)
 		}
+		p.nextToken() // Move to next token after statement
 	}
+
 	return program
 }
 
-func (p *parser) parseDeclaration() ast.Declaration {
-	switch p.curToken.Type {
-	case lexer.MUT:
-		return p.parseVarDecl()
-	case lexer.FUNC:
-		return p.parseFuncDecl()
-	case lexer.STRUCT:
-		return p.parseStructDecl()
-	case lexer.UNSAFE:
-		return p.parseUnsafeBlock()
-	default:
-		return p.parseStatement()
-	}
+// parseExpression is the single entry‐point for any expression,
+// matching the "Expression = Assignment" production.
+func (p *parser) parseExpression() ast.Expression {
+	return p.parseLogicalOr()
 }
 
-// mut var_name := expression || var_name := expression
-func (p *parser) parseVarDecl() *ast.VarDecl {
-	isMutable := false
-	if p.curToken.Type == lexer.MUT {
-		isMutable = true
-		p.nextToken() // Skip 'mut'
+// Handles "a || b || c"
+func (p *parser) parseLogicalOr() ast.Expression {
+	expr := p.parseLogicalAnd()
+
+	// we loop until we find a token that is not OR
+	for p.curTokenIs(lexer.OR) {
+		op := p.curToken.Literal
+		p.nextToken() // consume ||
+		right := p.parseLogicalAnd()
+		expr = &ast.BinaryExpression{Left: expr, Operator: op, Right: right}
 	}
-
-	name := p.parseIdentifier()
-	p.expect(lexer.COLONEQ) // Expect :=
-
-	varDecl := &ast.VarDecl{
-		Mutable: isMutable,
-		Name:    name,
-		Value:   p.parseExpression(),
-	}
-
-	return varDecl
+	return expr
 }
 
-func (p *parser) parseIdentifier() *ast.Identifier {
+// Handles "a && b && c"
+func (p *parser) parseLogicalAnd() ast.Expression {
+	expr := p.parseEquality()
+	// we loop until we find a token that is not AND
+	for p.curTokenIs(lexer.AND) {
+		op := p.curToken.Literal
+		p.nextToken() // consume &&
+		right := p.parseEquality()
+		expr = &ast.BinaryExpression{Left: expr, Operator: op, Right: right}
+	}
+	return expr
+}
+
+// Handles == and !=
+func (p *parser) parseEquality() ast.Expression {
+	expr := p.parseComparison()
+
+	// we loop until we find a token that is not EQ or NEQ
+	for p.curTokenIs(lexer.EQEQ) || p.curTokenIs(lexer.BANGEQ) {
+		op := p.curToken.Literal
+		p.nextToken() // consume EQ or NEQ
+		right := p.parseComparison()
+		expr = &ast.BinaryExpression{Left: expr, Operator: op, Right: right}
+	}
+	return expr
+}
+
+// Handles <, >, <=, >=
+func (p *parser) parseComparison() ast.Expression {
+	expr := p.parseTerm()
+
+	// we loop until we find a token that is not LT, GT, LE, or GE
+	for p.curTokenIs(lexer.LT) || p.curTokenIs(lexer.GT) || p.curTokenIs(lexer.LTEQ) || p.curTokenIs(lexer.GTEQ) {
+		op := p.curToken.Literal
+		p.nextToken() // consume LT, GT, LE, or GE
+		right := p.parseTerm()
+		expr = &ast.BinaryExpression{Left: expr, Operator: op, Right: right}
+	}
+	return expr
+}
+
+// Handles + and -
+func (p *parser) parseTerm() ast.Expression {
+	expr := p.parseFactor()
+
+	// we loop until we find plus or minus
+	for p.curTokenIs(lexer.PLUS) || p.curTokenIs(lexer.MINUS) {
+		op := p.curToken.Literal
+		p.nextToken() // consume plus or minus
+		right := p.parseFactor()
+		expr = &ast.BinaryExpression{Left: expr, Operator: op, Right: right}
+	}
+	return expr
+}
+
+// Handles *, /, %
+func (p *parser) parseFactor() ast.Expression {
+	expr := p.parseUnary()
+
+	// we loop until we find times or divide
+	for p.curTokenIs(lexer.ASTERISK) || p.curTokenIs(lexer.SLASH) || p.curTokenIs(lexer.PERCENT) {
+		op := p.curToken.Literal
+		p.nextToken() // consume times or divide
+		right := p.parseUnary()
+		expr = &ast.BinaryExpression{Left: expr, Operator: op, Right: right}
+	}
+	return expr
+}
+
+// Handles unary ! and -
+func (p *parser) parseUnary() ast.Expression {
+	if p.curTokenIs(lexer.BANG) || p.curTokenIs(lexer.MINUS) {
+		op := p.curToken.Literal
+		p.nextToken()
+		right := p.parseUnary()
+		return &ast.UnaryExpression{Operator: op, Right: right}
+	}
+	return p.parsePrimary()
+}
+
+// parseIdentifier parses an identifier expression
+func (p *parser) parseIdentifier() ast.Expression {
 	ident := &ast.Identifier{Name: p.curToken.Literal}
-	p.nextToken() // Skip identifier
+	p.nextToken() // consume the identifier
 	return ident
 }
 
-func (p *parser) expect(t lexer.TokenType) {
-	if p.curToken.Type != t {
-		msg := fmt.Sprintf("Expected token type %v but got %v at line %d, column %d",
-			t, p.curToken.Type, p.curToken.Line, p.curToken.Column)
-		p.recordError(msg)
-		return // Return early since we encountered an error
+// parseNumberLiteral parses a number literal
+func (p *parser) parseNumberLiteral() ast.Expression {
+	val, err := strconv.ParseFloat(p.curToken.Literal, 64)
+	if err != nil {
+		p.recordError("failed to parse number: " + err.Error())
+		return nil
 	}
-	p.nextToken()
+	lit := &ast.Literal{
+		Token: p.curToken.Literal,
+		Value: val,
+	}
+	p.nextToken() // consume the number
+	return lit
 }
 
-func (p *parser) currentTokenIs(types ...lexer.TokenType) bool {
-	for _, t := range types {
-		if p.curToken.Type == t {
-			return true
+// parseStringLiteral parses a string literal
+func (p *parser) parseStringLiteral() ast.Expression {
+	lit := &ast.Literal{
+		Token: p.curToken.Literal,
+		Value: p.curToken.Literal,
+	}
+	p.nextToken() // consume the string
+	return lit
+}
+
+// parseBooleanLiteral parses a boolean literal
+func (p *parser) parseBooleanLiteral() ast.Expression {
+	lit := &ast.Literal{
+		Token: p.curToken.Literal,
+		Value: p.curToken.Type == lexer.TRUE,
+	}
+	p.nextToken() // consume the boolean
+	return lit
+}
+
+// parseNilLiteral parses a nil literal
+func (p *parser) parseNilLiteral() ast.Expression {
+	lit := &ast.Literal{
+		Token: p.curToken.Literal,
+		Value: nil,
+	}
+	p.nextToken() // consume the nil
+	return lit
+}
+
+// parseArrayLiteral parses an array literal
+func (p *parser) parseArrayLiteral() ast.Expression {
+	array := &ast.ArrayLiteral{}
+	p.nextToken() // consume [
+
+	// Handle empty array
+	if p.curTokenIs(lexer.RBRACKET) {
+		p.nextToken() // consume ]
+		return array
+	}
+
+	// Parse array elements
+	array.Elements = append(array.Elements, p.parseExpression())
+	for p.curTokenIs(lexer.COMMA) {
+		p.nextToken() // consume comma
+		array.Elements = append(array.Elements, p.parseExpression())
+	}
+
+	if !p.expectCurrent(lexer.RBRACKET) {
+		return nil
+	}
+
+	return array
+}
+
+// parseCallExpression parses a function call expression
+func (p *parser) parseCallExpression(function ast.Expression) ast.Expression {
+	// 1. Create the AST node for the entire call, storing the 'function' part.
+	call := &ast.FunctionCall{
+		Function: function,
+	}
+	p.nextToken() // 2. Consume the opening parenthesis '('.
+
+	// 3. Handle the case of a call with no arguments, like myFunction().
+	if p.curTokenIs(lexer.RPAREN) {
+		p.nextToken() // Consume the closing parenthesis ')'.
+		return call   // The call expression is complete.
+	}
+
+	// 4. If there are arguments, parse the first one.
+	//    It calls p.parseExpression(), so an argument can be any valid expression.
+	call.Arguments = append(call.Arguments, p.parseExpression())
+
+	// 5. Loop as long as you see commas, parsing each subsequent argument.
+	for p.curTokenIs(lexer.COMMA) {
+		p.nextToken() // Consume the comma.
+		call.Arguments = append(call.Arguments, p.parseExpression())
+	}
+
+	// 6. Ensure the argument list is correctly closed with a ')'.
+	if !p.expectCurrent(lexer.RPAREN) {
+		return nil // Error
+	}
+
+	// 7. Return the completed FunctionCall AST node.
+	return call
+}
+
+// parseIndexExpression parses an array indexing expression
+func (p *parser) parseIndexExpression(array ast.Expression) ast.Expression {
+	// 1. Create the AST node for the index operation, storing the 'array' part.
+	index := &ast.IndexExpression{
+		Object: array,
+	}
+	p.nextToken() // 2. Consume the opening bracket '['.
+
+	// 3. Parse the expression *inside* the brackets. Because this calls
+	//    p.parseExpression(), the index can be a complex expression itself.
+	index.Index = p.parseExpression()
+
+	// 4. Ensure the index is correctly closed with a ']'.
+	if !p.expectCurrent(lexer.RBRACKET) {
+		return nil // Error
+	}
+
+	// 5. Return the completed IndexExpression AST node.
+	return index
+}
+
+// parseMemberExpression parses a member access expression
+func (p *parser) parseMemberExpression(object ast.Expression) ast.Expression {
+	p.nextToken() // 1. Consume the dot '.'.
+
+	// 2. Check that what follows the dot is a valid identifier.
+	if !p.curTokenIs(lexer.IDENT) {
+		p.recordError("expected identifier after '.'")
+		return nil // Error
+	}
+
+	// 3. Create the AST node for the member access expression.
+	return &ast.MemberExpression{
+		Object: object, // The expression on the left of the dot.
+		// Parse the identifier on the right and assert it to the correct AST type.
+		Property: p.parseIdentifier().(*ast.Identifier),
+	}
+}
+
+// parsePrimary parses primary expressions and their suffixes
+func (p *parser) parsePrimary() ast.Expression {
+	var expr ast.Expression
+
+	switch p.curToken.Type {
+	case lexer.IDENT:
+		expr = p.parseIdentifier()
+	case lexer.NUMBER:
+		expr = p.parseNumberLiteral()
+	case lexer.STRING:
+		expr = p.parseStringLiteral()
+	case lexer.TRUE, lexer.FALSE:
+		expr = p.parseBooleanLiteral()
+	case lexer.NIL:
+		expr = p.parseNilLiteral()
+	case lexer.LPAREN:
+		p.nextToken()
+		expr = p.parseExpression()
+		if !p.expectCurrent(lexer.RPAREN) {
+			return nil
+		}
+	case lexer.LBRACKET:
+		expr = p.parseArrayLiteral()
+	default:
+		return nil // or an error node
+	}
+
+	// Handle suffixes (function calls, indexing, member access)
+	for {
+		switch p.curToken.Type {
+		case lexer.LPAREN:
+			expr = p.parseCallExpression(expr)
+		case lexer.LBRACKET:
+			expr = p.parseIndexExpression(expr)
+		case lexer.DOT:
+			expr = p.parseMemberExpression(expr)
+		default:
+			return expr
 		}
 	}
+}
+
+func (p *parser) peekTokenIs(t lexer.TokenType) bool {
+	return p.peekToken.Type == t
+}
+
+func (p *parser) curTokenIs(t lexer.TokenType) bool {
+	return p.curToken.Type == t
+}
+
+func (p *parser) isAtEnd() bool {
+	return p.peekToken.Type == lexer.EOF
+}
+
+// expectPeek checks if the next token is of the expected type
+func (p *parser) expectPeek(t lexer.TokenType) bool {
+	if p.peekTokenIs(t) {
+		p.nextToken()
+		return true
+	}
+	p.recordError("expected next token to be " + string(t) + ", got " + string(p.peekToken.Type))
+	p.synchronize() // Start fast-forwarding!
 	return false
 }
 
-// Example: Parse additive expressions (+, -)
-// The main trick here is that functions handling lower precedence operators (like +, -)
-// will call functions that handle higher precedence operators (like *, /)
-// to get their operands. This naturally groups operations according to their precedence.
-func (p *parser) parseExpression() ast.Expression {
-	// Logic: In this version, it simply delegates to parseAdditive().
-	// This means that the lowest level of precedence it directly considers is addition/subtraction.
-	// If you had even lower precedence operators (e.g., logical OR, assignments if they were expressions),
-	// parseExpression might start there, or parseAdditive would be the entry if +/- were the lowest.
-	return p.parseAdditive()
-}
-
-// Logic Breakdown:
-//
-//	Rule 1: expr := p.parseMultiplicative(): Crucially, to get the first part (left operand) of an additive expression (e.g., the A in A + B), it calls parseMultiplicative(). This means anything that parseMultiplicative can parse (like X * Y or just a number Z) can be the left operand of a + or -.
-//	Rule 2 (The Loop): for p.currentTokenIs(lexer.PLUS, lexer.MINUS):
-//	    It then checks if the current token is a + or -.
-//	    If it is, it means we have an ongoing additive expression (e.g., we've parsed A and now see + B).
-//	    The loop continues as long as it finds + or - operators. This handles chains like A + B - C.
-//	Inside the Loop (Building the AST):
-//	    operator := p.curToken.Literal: Stores the operator (+ or -).
-//	    p.nextToken(): Consumes the operator token.
-//	    expr = &ast.BinaryExpression{ Left: expr, ... }: This is where the Abstract Syntax Tree (AST) node is built. The expr that was parsed so far becomes the Left child of the new BinaryExpression.
-//	    Right: p.parseMultiplicative(): Rule 3: To get the right operand (e.g., the B in A + B), it again calls parseMultiplicative(). This ensures that if you have A + B * C, B * C will be parsed by parseMultiplicative first and become a single unit (an AST node) before being made the right child of the + operation.
-//
-// Associativity: Because expr (the result of the previous operation) becomes the Left operand of the new operation, this structure naturally handles left-associativity for + and -. For example, A + B - C is parsed as (A + B) - C.
-func (p *parser) parseAdditive() ast.Expression {
-	expr := p.parseMultiplicative() // Rule 1: Get the left operand
-
-	// Rule 2: Loop for subsequent '+' or '-' operators
-	for p.currentTokenIs(lexer.PLUS, lexer.MINUS) {
-		operator := p.curToken.Literal // Get the operator
-		p.nextToken()                  // Consume the operator token
-		// The current 'expr' is the left side of the new BinaryExpression
-		// The right side is whatever parseMultiplicative gives us next
-		expr = &ast.BinaryExpression{
-			Left:     expr,
-			Operator: operator,
-			Right:    p.parseMultiplicative(), // Rule 3: Get the right operand
-		}
+// Add this new helper function to your parser
+func (p *parser) expectCurrent(t lexer.TokenType) bool {
+	if p.curTokenIs(t) {
+		p.nextToken() // It's what we expect, so we consume it and move on
+		return true
 	}
-	return expr
+	// If it's not what we expect, record an error
+	p.recordError("expected current token to be " + string(t) + ", got " + string(p.curToken.Type))
+	p.synchronize() // Start fast-forwarding!
+	return false
 }
 
-func (p *parser) parseMultiplicative() ast.Expression {
-	expr := p.parsePrimary() // Rule 1: Get the left operand
+// synchronize implements panic-mode error recovery:
+// it skips tokens until it finds a synchronization point to resume parsing
+func (p *parser) synchronize() {
+	p.nextToken() // Advance past the erroneous token
 
-	// Rule 2: Loop for subsequent '*' or '/' operators
-	for p.currentTokenIs(lexer.ASTERISK, lexer.SLASH) {
-		operator := p.curToken.Literal
+	for !p.isAtEnd() {
+		if p.curTokenIs(lexer.SEMICOLON) {
+			p.nextToken() // Consume the semicolon
+			return
+		}
+
+		switch p.curToken.Type {
+		case lexer.FUNC, lexer.MUT, lexer.RBRACE, lexer.RBRACKET,
+			lexer.FOR, lexer.IF, lexer.RETURN, lexer.UNSAFE:
+			return // These tokens likely start a new statement or declaration
+		}
+
 		p.nextToken()
-		expr = &ast.BinaryExpression{
-			Left:     expr,
-			Operator: operator,
-			Right:    p.parsePrimary(), // Rule 3: Get the right operand
-		}
-	}
-	return expr
-}
-
-// Logic Breakdown:
-// lexer.NUMBER: If it's a number, it creates an ast.NumberLiteral node and advances the token.
-// lexer.IDENT: If it's an identifier (like a variable name), it calls p.parseIdentifier() (which should return an ast.Identifier node or similar ast.Expression).
-// lexer.LPAREN: This handles parenthesized expressions like (A + B).
-//
-//	It consumes the (.
-//	Crucially, it calls p.parseExpression() recursively. This allows an entire new expression (with its own precedence rules) to be parsed within the parentheses.
-//	It then expects a ).
-//	The AST of the inner expression is returned. This is how parentheses override the default operator precedence.
-//
-// default: If the token is none of the above, it's an unexpected token in this context. It records an error (good!) and returns nil.
-// How Precedence is Achieved (Example: A + B * C)
-//
-//	parseExpression() calls parseAdditive().
-//	parseAdditive() calls expr_left := p.parseMultiplicative() to get its first operand.
-//	parseMultiplicative() (for A): calls p.parsePrimary(). parsePrimary returns A. parseMultiplicative sees no * or / after A, so it returns A.
-//	So, expr_left in parseAdditive() is A.
-//	parseAdditive() sees the + token.
-//	It stores +.
-//	It calls expr_right := p.parseMultiplicative() to get the right operand of +.
-//	parseMultiplicative() (for B * C):
-//		Calls sub_expr_left := p.parsePrimary(). parsePrimary returns B.
-//		parseMultiplicative() sees *. Stores *.
-//		Calls sub_expr_right := p.parsePrimary(). parsePrimary returns C.
-//		parseMultiplicative() builds BinaryExpression{Left: B, Operator: "*", Right: C}.
-//		It sees no more * or / tokens. It returns the (B * C) AST node.
-//	Back in parseAdditive(), expr_right is now the AST node for (B * C).
-//	parseAdditive() builds BinaryExpression{Left: A, Operator: "+", Right: (B*C)}.
-//	No more + or - tokens. parseAdditive() returns the final AST for (A + (B * C)).
-//
-// This shows how B * C is grouped together because parseAdditive calls parseMultiplicative to get its operands, and parseMultiplicative will fully resolve its higher-precedence operations before returning.
-func (p *parser) parsePrimary() ast.Expression {
-	switch p.curToken.Type {
-	case lexer.NUMBER:
-		lit := &ast.NumberLiteral{Value: p.curToken.Literal}
-		p.nextToken()
-		return lit
-	case lexer.IDENT:
-		return p.parseIdentifier() // Assumes parseIdentifier() returns an ast.Expression (e.g., ast.Identifier)
-	case lexer.LPAREN: // '('
-		p.nextToken()               // Consume '('
-		expr := p.parseExpression() // Recursively parse the inner expression
-		p.expect(lexer.RPAREN)      // Consume ')' - expect will handle error if not found
-		return expr                 // Return the AST of the inner expression
-	default:
-		// This error handling is good!
-		p.recordError(fmt.Sprintf("unexpected token in primary expression: %v", p.curToken.Type))
-		return nil
 	}
 }
 
-func (p *parser) parseFuncDecl() ast.Declaration {
-	p.nextToken() // skip 'func'
-	name := p.parseIdentifier()
-
-	p.expect(lexer.LPAREN)
-	p.parseParameterList()
-	p.expect(lexer.RPAREN)
-
-	// TODO: Parse return type and body
-	return &ast.FuncDecl{Name: name}
-}
-
-// func anotherFunc(a :int, b :int, c :int)
-func (p *parser) parseParameterList() []*ast.ParameterNode {
-	parameters := []*ast.ParameterNode{}
-
-	// Handle empty parameter list: if current token is RPAREN, e.g. foo()
-	if p.currentTokenIs(lexer.RPAREN) {
-		return parameters
-	}
-
-	// Parse the first parameter
-	var paramNameNode *ast.Identifier
-	var paramTypeNode ast.TypeNode
-
-	// 1. Parse the parameter name (IDENT)
-	if !p.currentTokenIs(lexer.IDENT) {
-		p.recordError(fmt.Sprintf("SyntaxError: Expected parameter name (identifier), got %v at line %d, column %d. Violated rule: <FUNC_PARAM_NAME>", p.curToken.Type, p.curToken.Line, p.curToken.Column))
-		return parameters // Return to allow parser to potentially recover or hit RPAREN expectation
-	}
-	paramNameNode = p.parseIdentifier() // Consumes IDENT
-
-	// 2. Expect and consume COLON (:)
-	if !p.currentTokenIs(lexer.COLON) {
-		p.recordError(fmt.Sprintf("SyntaxError: Expected ':' after parameter name '%s', got %v at line %d, column %d. Violated rule: <FUNC_PARAM_COLON>", paramNameNode.Name, p.curToken.Type, p.curToken.Line, p.curToken.Column))
-		return parameters
-	}
-	p.nextToken() // Consume COLON
-
-	// 3. Parse the Type (currently an IDENT, e.g., 'int')
-	if !p.currentTokenIs(lexer.IDENT) {
-		p.recordError(fmt.Sprintf("SyntaxError: Expected parameter type (identifier) after ':', got %v at line %d, column %d. Violated rule: <FUNC_PARAM_TYPE>", p.curToken.Type, p.curToken.Line, p.curToken.Column))
-		return parameters
-	}
-	tempTypeIdent := p.parseIdentifier() // Consumes type IDENT
-	paramTypeNode = tempTypeIdent        // ast.Identifier implements ast.TypeNode
-
-	parameters = append(parameters, &ast.ParameterNode{Name: paramNameNode, Type: paramTypeNode})
-
-	// Loop for subsequent parameters, e.g. (a:int, b:string)
-	for p.currentTokenIs(lexer.COMMA) {
-		p.nextToken() // Consume COMMA
-
-		// After a comma, another full parameter declaration is expected.
-		if !p.currentTokenIs(lexer.IDENT) {
-			p.recordError(fmt.Sprintf("SyntaxError: Expected parameter name (identifier) after comma, got %v at line %d, column %d. Violated rule: <FUNC_PARAM_NAME_AFTER_COMMA>", p.curToken.Type, p.curToken.Line, p.curToken.Column))
-			return parameters // Syntax error
-		}
-		paramNameNode = p.parseIdentifier()
-
-		if !p.currentTokenIs(lexer.COLON) {
-			p.recordError(fmt.Sprintf("SyntaxError: Expected ':' after parameter name '%s', got %v at line %d, column %d. Violated rule: <FUNC_PARAM_COLON>", paramNameNode.Name, p.curToken.Type, p.curToken.Line, p.curToken.Column))
-			return parameters
-		}
-		p.nextToken() // Consume COLON
-
-		if !p.currentTokenIs(lexer.IDENT) {
-			p.recordError(fmt.Sprintf("SyntaxError: Expected parameter type (identifier) after ':', got %v at line %d, column %d. Violated rule: <FUNC_PARAM_TYPE>", p.curToken.Type, p.curToken.Line, p.curToken.Column))
-			return parameters
-		}
-		tempTypeIdent = p.parseIdentifier()
-		paramTypeNode = tempTypeIdent
-
-		parameters = append(parameters, &ast.ParameterNode{Name: paramNameNode, Type: paramTypeNode})
-	}
-
-	return parameters
-}
-
-func (p *parser) parseStructDecl() ast.Declaration {
-	p.nextToken() // skip 'struct'
-	name := p.parseIdentifier()
-
-	p.expect(lexer.LBRACE)
-	// TODO: Parse fields
-	p.expect(lexer.RBRACE)
-
-	return &ast.StructDecl{Name: name}
-}
-
-func (p *parser) parseUnsafeBlock() ast.Declaration {
-	p.nextToken() // skip 'unsafe'
-	p.expect(lexer.LBRACE)
-	// TODO: Parse unsafe block contents
-	p.expect(lexer.RBRACE)
-
-	return &ast.UnsafeBlock{}
-}
-
+// parseStatement parses a single statement
 func (p *parser) parseStatement() ast.Statement {
 	switch p.curToken.Type {
 	case lexer.IF:
 		return p.parseIfStatement()
 	case lexer.FOR:
 		return p.parseForStatement()
+	case lexer.RETURN:
+		return p.parseReturnStatement()
 	case lexer.LOG:
 		return p.parsePrintStatement()
 	default:
@@ -325,44 +415,77 @@ func (p *parser) parseStatement() ast.Statement {
 	}
 }
 
-func (p *parser) parseExpressionStatement() ast.Statement {
-	expr := p.parseExpression()
-	return &ast.ExpressionStatement{Expression: expr}
-}
-
+// parseIfStatement parses an if statement
 func (p *parser) parseIfStatement() ast.Statement {
-	p.nextToken() // skip 'if'
+	stmt := &ast.IfStatement{}
+	p.nextToken() // consume 'if'
 
-	condition := p.parseExpression()
-
-	p.expect(lexer.LBRACE)
-	consequence := &ast.BlockStatement{}
-	// TODO: Parse consequence statements
-	p.expect(lexer.RBRACE)
-
-	return &ast.IfStatement{
-		Condition:   condition,
-		Consequence: consequence,
+	stmt.Condition = p.parseExpression()
+	if !p.expectCurrent(lexer.LBRACE) {
+		return nil
 	}
+
+	stmt.Consequence = &ast.BlockStatement{}
+	for !p.curTokenIs(lexer.RBRACE) && !p.isAtEnd() {
+		stmt.Consequence.Statements = append(stmt.Consequence.Statements, p.parseStatement())
+		p.nextToken()
+	}
+
+	return stmt
 }
 
+// parseForStatement parses a for statement
 func (p *parser) parseForStatement() ast.Statement {
-	p.nextToken() // skip 'for'
+	stmt := &ast.ForStatement{}
+	p.nextToken() // consume 'for'
 
-	// TODO: Parse init, condition, post
-	p.expect(lexer.LBRACE)
-	body := &ast.BlockStatement{}
-	// TODO: Parse body statements
-	p.expect(lexer.RBRACE)
+	if !p.expectCurrent(lexer.LBRACE) {
+		return nil
+	}
 
-	return &ast.ForStatement{Body: body}
+	stmt.Body = &ast.BlockStatement{}
+	for !p.curTokenIs(lexer.RBRACE) && !p.isAtEnd() {
+		stmt.Body.Statements = append(stmt.Body.Statements, p.parseStatement())
+		p.nextToken()
+	}
+
+	return stmt
 }
 
-func (p *parser) parsePrintStatement() ast.Statement {
-	p.nextToken() // skip 'log'
-	p.expect(lexer.LPAREN)
-	expr := p.parseExpression()
-	p.expect(lexer.RPAREN)
+// parseReturnStatement parses a return statement
+func (p *parser) parseReturnStatement() ast.Statement {
+	stmt := &ast.ReturnStatement{}
+	p.nextToken() // consume 'return'
 
-	return &ast.PrintStatement{Expression: expr}
+	if !p.curTokenIs(lexer.SEMICOLON) {
+		stmt.Value = p.parseExpression()
+	}
+
+	return stmt
+}
+
+// parsePrintStatement parses a print/log statement
+func (p *parser) parsePrintStatement() ast.Statement {
+	stmt := &ast.PrintStatement{}
+	p.nextToken() // consume 'log'
+
+	if !p.expectCurrent(lexer.LPAREN) {
+		return nil
+	}
+
+	stmt.Expression = p.parseExpression()
+
+	if !p.expectCurrent(lexer.RPAREN) {
+		return nil
+	}
+
+	return stmt
+}
+
+// parseExpressionStatement parses an expression statement
+func (p *parser) parseExpressionStatement() ast.Statement {
+	stmt := &ast.ExpressionStatement{
+		Expression: p.parseExpression(),
+	}
+	return stmt
 }
