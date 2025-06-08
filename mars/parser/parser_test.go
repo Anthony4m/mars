@@ -22,20 +22,20 @@ func TestParseFuncDecl_CurrentBehavior(t *testing.T) {
 			expectedErrorCount:       0,
 		},
 		{
-			input:                    "func anotherFunc(a, b, c)",
+			input:                    "func anotherFunc(a: int , b : int,  c  :int)",
 			expectedName:             "anotherFunc",
 			expectedParamIdentifiers: []string{"a", "b", "c"}, // parseParameterList would see these
 			expectedErrorCount:       0,
 		},
 		{
-			input:                    "func withSingleParam(p1)",
+			input:                    "func withSingleParam(p1:string)",
 			expectedName:             "withSingleParam",
 			expectedParamIdentifiers: []string{"p1"},
 			expectedErrorCount:       0,
 		},
 		// Test for a case that might expose issues if not handled carefully, like EOF after params
 		{
-			input:                    "func trailing(p)",
+			input:                    "func trailing(p :bool)",
 			expectedName:             "trailing",
 			expectedParamIdentifiers: []string{"p"},
 			expectedErrorCount:       0,
