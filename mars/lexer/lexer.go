@@ -267,26 +267,35 @@ func (l *Lexer) NextToken() Token {
 
 // readIdentifier reads an identifier or keyword
 func (l *Lexer) readIdentifier() string {
-	position := l.position
+	var identifier []rune
+
 	for isLetter(l.ch) || isDigit(l.ch) || l.ch == '_' {
+		identifier = append(identifier, l.ch)
 		l.readChar()
 	}
-	return l.input[position:l.position]
+
+	return string(identifier)
 }
 
 // readNumber reads a number literal
 func (l *Lexer) readNumber() string {
-	position := l.position
+	var number []rune
+
 	for isDigit(l.ch) {
+		number = append(number, l.ch)
 		l.readChar()
 	}
+
 	if l.ch == '.' && isDigit(l.peekChar()) {
-		l.readChar() // consume the dot
+		number = append(number, l.ch)
+		l.readChar()
 		for isDigit(l.ch) {
+			number = append(number, l.ch)
 			l.readChar()
 		}
 	}
-	return l.input[position:l.position]
+
+	return string(number)
 }
 
 // readString reads a string literal
