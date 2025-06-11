@@ -191,6 +191,12 @@ func (p *parser) parseFunctionDeclaration() ast.Declaration {
 
 	// Parse function body
 	funcDecl.Body = p.parseBlockStatement()
+
+	// Optional semicolon
+	if p.curTokenIs(lexer.SEMICOLON) {
+		p.nextToken()
+	}
+
 	return funcDecl
 }
 
@@ -492,6 +498,7 @@ func (p *parser) parsePrimary() ast.Expression {
 	case lexer.LBRACKET:
 		expr = p.parseArrayLiteral()
 	default:
+		p.synchronize()
 		p.recordError(fmt.Sprintf("unexpected token %s in expression", p.curToken.Type))
 		return nil
 	}
