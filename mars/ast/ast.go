@@ -1,7 +1,9 @@
 // ast/ast.go
 package ast
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // Node represents a node in the AST
 // Pos returns line and column for error reporting (optional)
@@ -429,9 +431,11 @@ func (rs *ReturnStatement) String() string {
 }
 
 func (es *ExpressionStatement) String() string {
+	if es.Expression == nil {
+		return "<nil expression>;"
+	}
 	return es.Expression.String() + ";"
 }
-
 func (bs *BreakStatement) String() string {
 	return "break;"
 }
@@ -489,7 +493,7 @@ func (be *BinaryExpression) String() string {
 }
 
 func (ue *UnaryExpression) String() string {
-	return ue.Operator + ue.Right.String()
+	return "(" + ue.Operator + ue.Right.String() + ")"
 }
 
 func (l *Literal) String() string {
