@@ -5,10 +5,17 @@ import (
 	"fmt"
 )
 
+// Position represents a position in the source code
+type Position struct {
+	Line   int
+	Column int
+}
+
 // Node represents a node in the AST
 // Pos returns line and column for error reporting (optional)
 type Node interface {
 	TokenLiteral() string
+	Pos() Position
 }
 
 // Declaration represents a declaration or top-level statement
@@ -41,56 +48,64 @@ type Expression interface {
 // It contains both declarations and top-level statements
 type Program struct {
 	Declarations []Declaration
+	Position     Position
 }
 
 // VarDecl represents a variable declaration
 type VarDecl struct {
-	Mutable bool
-	Name    *Identifier
-	Type    *Type
-	Value   Expression
+	Mutable  bool
+	Name     *Identifier
+	Type     *Type
+	Value    Expression
+	Position Position
 }
 
 // AssignmentStatement represents mutable variable assignment
 type AssignmentStatement struct {
-	Name  *Identifier
-	Value Expression
+	Name     *Identifier
+	Value    Expression
+	Position Position
 }
 
 // FuncDecl represents a function declaration
 type FuncDecl struct {
-	Name       *Identifier
-	Parameters []*Parameter
-	ReturnType *Type
-	Body       *BlockStatement
+	Name      *Identifier
+	Signature *FunctionSignature
+	Body      *BlockStatement
+	Position  Position
 }
 
 // StructDecl represents a struct declaration
 type StructDecl struct {
-	Name   *Identifier
-	Fields []*FieldDecl
+	Name     *Identifier
+	Fields   []*FieldDecl
+	Position Position
 }
 
 // UnsafeBlock represents an unsafe block
 type UnsafeBlock struct {
-	Body *BlockStatement
+	Body     *BlockStatement
+	Position Position
 }
 
 // Parameter represents a function parameter
 type Parameter struct {
-	Name *Identifier
-	Type *Type
+	Name     *Identifier
+	Type     *Type
+	Position Position
 }
 
 // FieldDecl represents a struct field declaration
 type FieldDecl struct {
-	Name *Identifier
-	Type *Type
+	Name     *Identifier
+	Type     *Type
+	Position Position
 }
 
 // BlockStatement represents a block of statements
 type BlockStatement struct {
 	Statements []Statement
+	Position   Position
 }
 
 // IfStatement represents an if statement
@@ -98,6 +113,7 @@ type IfStatement struct {
 	Condition   Expression
 	Consequence *BlockStatement
 	Alternative *BlockStatement
+	Position    Position
 }
 
 // ForStatement represents a for statement
@@ -106,26 +122,38 @@ type ForStatement struct {
 	Condition Expression
 	Post      Statement
 	Body      *BlockStatement
+	Position  Position
 }
 
 // PrintStatement represents a print/log statement
 type PrintStatement struct {
 	Expression Expression
+	Position   Position
 }
 
 // ReturnStatement represents a return statement
 type ReturnStatement struct {
-	Value Expression
+	Value    Expression
+	Position Position
 }
 
 // ExpressionStatement represents an expression statement
 type ExpressionStatement struct {
 	Expression Expression
+	Position   Position
 }
 
 // Identifier represents an identifier
 type Identifier struct {
-	Name string
+	Name     string
+	Position Position
+}
+
+// FunctionSignature represents a function's type signature
+type FunctionSignature struct {
+	Parameters []*Parameter
+	ReturnType *Type
+	Position   Position
 }
 
 // Type represents a type
@@ -137,29 +165,36 @@ type Type struct {
 	PointerType *Type  // For *T
 	StructName  string // For struct references
 	MapType     *Type  // For map[K]V
+	Position    Position
+	// Function signature for function types
+	FunctionSignature *FunctionSignature
 }
 
 // ArrayLiteral represents an array or slice literal
 type ArrayLiteral struct {
 	Elements []Expression
+	Position Position
 }
 
 // StructLiteral represents a struct literal
 type StructLiteral struct {
-	Type   *Identifier
-	Fields []*FieldInit
+	Type     *Identifier
+	Fields   []*FieldInit
+	Position Position
 }
 
 // FieldInit represents a struct field initialization
 type FieldInit struct {
-	Name  *Identifier
-	Value Expression
+	Name     *Identifier
+	Value    Expression
+	Position Position
 }
 
 // FunctionCall represents a function or method call
 type FunctionCall struct {
 	Function  Expression
 	Arguments []Expression
+	Position  Position
 }
 
 // BinaryExpression represents a binary operation
@@ -167,42 +202,52 @@ type BinaryExpression struct {
 	Left     Expression
 	Operator string
 	Right    Expression
+	Position Position
 }
 
 // UnaryExpression represents a unary operation
 type UnaryExpression struct {
 	Operator string
 	Right    Expression
+	Position Position
 }
 
 // Literal represents a literal value (number, string, boolean, nil)
 type Literal struct {
-	Token string
-	Value interface{}
+	Token    string
+	Value    interface{}
+	Position Position
 }
 
 // MemberExpression represents object.member access
 type MemberExpression struct {
 	Object   Expression
 	Property *Identifier
+	Position Position
 }
 
 // BreakStatement represents a break within loops
-type BreakStatement struct{}
+type BreakStatement struct {
+	Position Position
+}
 
 // ContinueStatement represents a continue within loops
-type ContinueStatement struct{}
+type ContinueStatement struct {
+	Position Position
+}
 
 // IndexExpression represents array indexing (a[i])
 type IndexExpression struct {
-	Object Expression
-	Index  Expression
+	Object   Expression
+	Index    Expression
+	Position Position
 }
 
 type SliceExpression struct {
-	Object Expression
-	Start  Expression // Can be nil for [:end]
-	End    Expression // Can be nil for [start:]
+	Object   Expression
+	Start    Expression // Can be nil for [:end]
+	End      Expression // Can be nil for [start:]
+	Position Position
 }
 
 // MapLiteral represents a map literal
@@ -210,6 +255,7 @@ type MapLiteral struct {
 	KeyType   *Type
 	ValueType *Type
 	Elements  []Expression
+	Position  Position
 }
 
 // TokenLiteral implementations
@@ -243,6 +289,33 @@ func (cs *ContinueStatement) TokenLiteral() string   { return "continue" }
 func (ie *IndexExpression) TokenLiteral() string     { return "[" }
 func (se *SliceExpression) TokenLiteral() string     { return "[" }
 func (ml *MapLiteral) TokenLiteral() string          { return "map" }
+
+// Position implementations
+func (p *Program) Pos() Position              { return p.Position }
+func (vd *VarDecl) Pos() Position             { return vd.Position }
+func (as *AssignmentStatement) Pos() Position { return as.Position }
+func (fd *FuncDecl) Pos() Position            { return fd.Position }
+func (sd *StructDecl) Pos() Position          { return sd.Position }
+func (ub *UnsafeBlock) Pos() Position         { return ub.Position }
+func (bs *BlockStatement) Pos() Position      { return bs.Position }
+func (is *IfStatement) Pos() Position         { return is.Position }
+func (fs *ForStatement) Pos() Position        { return fs.Position }
+func (ps *PrintStatement) Pos() Position      { return ps.Position }
+func (rs *ReturnStatement) Pos() Position     { return rs.Position }
+func (es *ExpressionStatement) Pos() Position { return es.Position }
+func (i *Identifier) Pos() Position           { return i.Position }
+func (al *ArrayLiteral) Pos() Position        { return al.Position }
+func (sl *StructLiteral) Pos() Position       { return sl.Position }
+func (fc *FunctionCall) Pos() Position        { return fc.Position }
+func (be *BinaryExpression) Pos() Position    { return be.Position }
+func (ue *UnaryExpression) Pos() Position     { return ue.Position }
+func (l *Literal) Pos() Position              { return l.Position }
+func (me *MemberExpression) Pos() Position    { return me.Position }
+func (bs *BreakStatement) Pos() Position      { return bs.Position }
+func (cs *ContinueStatement) Pos() Position   { return cs.Position }
+func (ie *IndexExpression) Pos() Position     { return ie.Position }
+func (se *SliceExpression) Pos() Position     { return se.Position }
+func (ml *MapLiteral) Pos() Position          { return ml.Position }
 
 // Node type implementations
 func (vd *VarDecl) declarationNode()             {}
@@ -314,9 +387,33 @@ func NewMapType(keyType *Type, valueType *Type) *Type {
 	return &Type{MapType: &Type{BaseType: "map", ArrayType: keyType}}
 }
 
+// NewFunctionType creates a function type with the given signature
+func NewFunctionType(signature *FunctionSignature) *Type {
+	return &Type{
+		BaseType:          "function",
+		FunctionSignature: signature,
+	}
+}
+
+// IsFunctionType checks if the type represents a function
+func (t *Type) IsFunctionType() bool {
+	return t.BaseType == "function" && t.FunctionSignature != nil
+}
+
+// GetFunctionSignature returns the function signature if this is a function type
+func (t *Type) GetFunctionSignature() *FunctionSignature {
+	if t.IsFunctionType() {
+		return t.FunctionSignature
+	}
+	return nil
+}
+
 // String method for better debugging
 func (t *Type) String() string {
 	if t.BaseType != "" {
+		if t.IsFunctionType() {
+			return "func" + t.FunctionSignature.String()
+		}
 		return t.BaseType
 	}
 	if t.ArrayType != nil {
@@ -354,15 +451,15 @@ func (as *AssignmentStatement) String() string {
 func (fd *FuncDecl) String() string {
 	var s string
 	s += "func " + fd.Name.Name + "("
-	for i, param := range fd.Parameters {
+	for i, param := range fd.Signature.Parameters {
 		if i > 0 {
 			s += ", "
 		}
 		s += param.Name.Name + " : " + param.Type.String()
 	}
 	s += ")"
-	if fd.ReturnType != nil {
-		s += " -> " + fd.ReturnType.String()
+	if fd.Signature.ReturnType != nil {
+		s += " -> " + fd.Signature.ReturnType.String()
 	}
 	s += " " + fd.Body.String()
 	return s
@@ -539,5 +636,22 @@ func (ml *MapLiteral) String() string {
 		s += elem.String()
 	}
 	s += "}"
+	return s
+}
+
+// String returns a string representation of the function signature
+func (fs *FunctionSignature) String() string {
+	var s string
+	s += "("
+	for i, param := range fs.Parameters {
+		if i > 0 {
+			s += ", "
+		}
+		s += param.Name.Name + " : " + param.Type.String()
+	}
+	s += ")"
+	if fs.ReturnType != nil {
+		s += " -> " + fs.ReturnType.String()
+	}
 	return s
 }

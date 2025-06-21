@@ -509,13 +509,13 @@ func TestFunctionLiteralParsing(t *testing.T) {
 			program.Declarations[0])
 	}
 
-	if len(stmt.Parameters) != 2 {
+	if len(stmt.Signature.Parameters) != 2 {
 		t.Fatalf("function parameters wrong. want 2, got=%d\n",
-			len(stmt.Parameters))
+			len(stmt.Signature.Parameters))
 	}
 
-	testLiteralExpression(t, stmt.Parameters[0].Name, "x")
-	testLiteralExpression(t, stmt.Parameters[1].Name, "y")
+	testLiteralExpression(t, stmt.Signature.Parameters[0].Name, "x")
+	testLiteralExpression(t, stmt.Signature.Parameters[1].Name, "y")
 
 	if len(stmt.Body.Statements) != 1 {
 		t.Fatalf("function.Body.Statements has not 1 statements. got=%d\n",
@@ -576,19 +576,19 @@ func TestFunctionParameterParsing(t *testing.T) {
 
 		stmt := program.Declarations[0].(*ast.FuncDecl)
 
-		if len(stmt.Parameters) != len(tt.expectedParams) {
+		if len(stmt.Signature.Parameters) != len(tt.expectedParams) {
 			t.Errorf("length parameters wrong. want %d, got=%d\n",
-				len(tt.expectedParams), len(stmt.Parameters))
+				len(tt.expectedParams), len(stmt.Signature.Parameters))
 		}
 
 		for i, param := range tt.expectedParams {
-			if stmt.Parameters[i].Name.Name != param.name {
+			if stmt.Signature.Parameters[i].Name.Name != param.name {
 				t.Errorf("parameter %d name wrong. want %s, got=%s\n",
-					i, param.name, stmt.Parameters[i].Name.Name)
+					i, param.name, stmt.Signature.Parameters[i].Name.Name)
 			}
-			if stmt.Parameters[i].Type.BaseType != param.typ {
+			if stmt.Signature.Parameters[i].Type.BaseType != param.typ {
 				t.Errorf("parameter %d type wrong. want %s, got=%s\n",
-					i, param.typ, stmt.Parameters[i].Type.BaseType)
+					i, param.typ, stmt.Signature.Parameters[i].Type.BaseType)
 			}
 		}
 	}
@@ -1170,7 +1170,7 @@ func TestParserErrorsCorrected(t *testing.T) {
 			p.ParseProgram()
 
 			errors := p.GetErrors()
-			hasErrors := len(errors) > 0
+			hasErrors := errors.HasErrors()
 
 			if tt.shouldError && !hasErrors {
 				t.Errorf("Expected errors but got none")
@@ -1180,9 +1180,9 @@ func TestParserErrorsCorrected(t *testing.T) {
 				t.Errorf("Expected no errors but got: %v", errors)
 			}
 
-			if tt.errorCount > 0 && len(errors) != tt.errorCount {
+			if tt.errorCount > 0 && len(errors.Errors()) != tt.errorCount {
 				t.Errorf("Expected %d errors, got %d: %v",
-					tt.errorCount, len(errors), errors)
+					tt.errorCount, len(errors.Errors()), errors)
 			}
 		})
 	}
@@ -1234,7 +1234,7 @@ func TestSpecificParserErrors(t *testing.T) {
 			program := p.ParseProgram()
 
 			errors := p.GetErrors()
-			hasErrors := len(errors) > 0
+			hasErrors := errors.HasErrors()
 
 			t.Logf("Input: %s", tt.input)
 			t.Logf("Errors: %v", errors)
@@ -1271,7 +1271,7 @@ func TestDebugParserErrors(t *testing.T) {
 
 			t.Logf("=== INPUT %d ===", i)
 			t.Logf("Code: %s", input)
-			t.Logf("Errors (%d): %v", len(errors), errors)
+			t.Logf("Errors (%d): %v", len(errors.Errors()), errors)
 			t.Logf("Declarations: %d", len(program.Declarations))
 			t.Logf("")
 		})
@@ -1305,13 +1305,13 @@ func testVariableDeclaration(t *testing.T, s ast.Declaration, name string, expec
 // Helper functions for testing
 
 func checkParserErrors(t *testing.T, p *parser) {
-	if len(p.errors) == 0 {
+	if !p.errors.HasErrors() {
 		return
 	}
 
-	t.Errorf("parser has %d errors", len(p.errors))
-	for _, msg := range p.errors {
-		t.Errorf("parser error: %q", msg)
+	t.Errorf("parser has %d errors", len(p.errors.Errors()))
+	for _, err := range p.errors.Errors() {
+		t.Errorf("parser error: %q", err.Error())
 	}
 	t.FailNow()
 }
@@ -1458,7 +1458,7 @@ func TestVariableDeclarationAlone(t *testing.T) {
 	t.Logf("Errors: %v", errors)
 	t.Logf("Declarations: %d", len(program.Declarations))
 
-	if len(errors) > 0 {
+	if errors.HasErrors() {
 		t.Fatalf("Variable declaration failed: %v", errors)
 	}
 
@@ -1493,7 +1493,7 @@ func TestLogStatementAlone(t *testing.T) {
 	t.Logf("Errors: %v", errors)
 	t.Logf("Declarations: %d", len(program.Declarations))
 
-	if len(errors) > 0 {
+	if errors.HasErrors() {
 		t.Fatalf("Log statement failed: %v", errors)
 	}
 
@@ -1632,7 +1632,7 @@ func TestParseDeclarationComponents(t *testing.T) {
 			t.Logf("Errors: %v", errors)
 			t.Logf("Declaration: %T", decl)
 
-			if len(errors) > 0 {
+			if errors.HasErrors() {
 				t.Errorf("Failed to parse %s: %v", test, errors)
 			}
 		})
