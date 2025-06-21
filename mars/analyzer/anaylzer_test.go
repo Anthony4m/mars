@@ -33,7 +33,7 @@ func TestBasicVariableCollection(t *testing.T) {
 		t.Fatalf("Symbol 'x' not found: %v", err)
 	}
 
-	if xSymbol.Type.BaseType != "int" {
+	if xSymbol.Type.BaseType != "float" {
 		t.Errorf("Expected x to be float, got %s", xSymbol.Type.BaseType)
 	}
 
@@ -76,17 +76,17 @@ func TestFunctionDeclarationCollection(t *testing.T) {
 		if !ok {
 			t.Fatalf("Expected first declaration to be a function declaration")
 		}
-		if stmt.Parameters[0].Type.BaseType != "int" {
-			t.Errorf("Expected first parameter to be int, got %s", stmt.Parameters[0].Type.BaseType)
+		if stmt.Signature.Parameters[0].Type.BaseType != "int" {
+			t.Errorf("Expected first parameter to be int, got %s", stmt.Signature.Parameters[0].Type.BaseType)
 		}
-		if stmt.Parameters[1].Type.BaseType != "int" {
-			t.Errorf("Expected second parameter to be int, got %s", stmt.Parameters[1].Type.BaseType)
+		if stmt.Signature.Parameters[1].Type.BaseType != "int" {
+			t.Errorf("Expected second parameter to be int, got %s", stmt.Signature.Parameters[1].Type.BaseType)
 		}
-		if stmt.ReturnType.BaseType != "int" {
-			t.Errorf("Expected return type to be int, got %s", stmt.ReturnType.BaseType)
+		if stmt.Signature.ReturnType.BaseType != "int" {
+			t.Errorf("Expected return type to be int, got %s", stmt.Signature.ReturnType.BaseType)
 		}
-		if len(stmt.Parameters) != 2 {
-			t.Errorf("Expected 2 parameters, got %d", len(stmt.Parameters))
+		if len(stmt.Signature.Parameters) != 2 {
+			t.Errorf("Expected 2 parameters, got %d", len(stmt.Signature.Parameters))
 		}
 	}
 
