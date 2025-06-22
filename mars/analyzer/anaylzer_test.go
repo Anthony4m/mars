@@ -91,3 +91,80 @@ func TestFunctionDeclarationCollection(t *testing.T) {
 	}
 
 }
+
+func TestStructDeclarationCollection(t *testing.T) {
+	input := `
+	struct Point {
+		x : int
+		y : int
+	}
+	`
+	// Parse to AST (you already have this)
+	lexer := lexer.New(input)
+	parser := parser.NewParser(lexer)
+	program := parser.ParseProgram()
+
+	// Create analyzer
+	analyzer := New(input, "test.mars")
+
+	// Test declaration collection
+	err := analyzer.collectDeclarations(program)
+	if err != nil {
+		t.Fatalf("Collection failed: %v", err)
+	}
+
+	// Verify struct was collected
+	structSymbol, err := analyzer.symbols.Resolve("Point")
+	if err != nil {
+		t.Fatalf("Symbol 'Point' not found: %v", err)
+	}
+
+	if structSymbol.Type.StructName != "Point" {
+		t.Errorf("Expected Point to be a struct, got %s", structSymbol.Type.BaseType)
+	}
+	if len(structSymbol.Type.StructFields) != 2 {
+		t.Errorf("Expected 2 fields in Point, got %d", len(structSymbol.Type.StructFields))
+	}
+}
+
+func TestStructDeclaration(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+		wantErr  bool
+	}{{
+		name: "Test Valid struct",
+		input: `struct Point {
+			x : int}`,
+		expected: `Point`,
+		wantErr:  false,
+	}, {
+		name: "Test Invalid struct",
+		input: `struct Point {
+		: int}`,
+		expected: ``,
+		wantErr:  true,
+	}}
+
+	for _, item := range tests {
+		l := lexer.New(item.input)
+		p := parser.NewParser(l)
+		program := p.ParseProgram()
+		analyzer := New(item.input, "test.mars")
+		// Test declaration collection
+		err := analyzer.collectDeclarations(program)
+		if item.wantErr {
+			if err == nil {
+				t.Errorf("Expected error but got none")
+				return
+			}
+		} else {
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+		}
+	}
+	// Parse the input
+
+}

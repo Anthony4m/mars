@@ -159,13 +159,14 @@ type FunctionSignature struct {
 // Type represents a type
 // Supports primitives, arrays, pointers, and structs
 type Type struct {
-	BaseType    string // "int", "float", "string", "bool"
-	ArrayType   *Type  // For []T or [N]T
-	ArraySize   *int   // nil for dynamic slices, value for fixed arrays
-	PointerType *Type  // For *T
-	StructName  string // For struct references
-	MapType     *Type  // For map[K]V
-	Position    Position
+	BaseType     string       // "int", "float", "string", "bool"
+	ArrayType    *Type        // For []T or [N]T
+	ArraySize    *int         // nil for dynamic slices, value for fixed arrays
+	PointerType  *Type        // For *T
+	StructName   string       // For struct references
+	StructFields []*FieldDecl // For struct types - stores the field declarations
+	MapType      *Type        // For map[K]V
+	Position     Position
 	// Function signature for function types
 	FunctionSignature *FunctionSignature
 }
@@ -379,8 +380,11 @@ func NewPointerType(pointeeType *Type) *Type {
 	return &Type{PointerType: pointeeType}
 }
 
-func NewStructType(name string) *Type {
-	return &Type{StructName: name}
+func NewStructType(name string, fields []*FieldDecl) *Type {
+	return &Type{
+		StructName:   name,
+		StructFields: fields,
+	}
 }
 
 func NewMapType(keyType *Type, valueType *Type) *Type {
@@ -408,6 +412,19 @@ func (t *Type) GetFunctionSignature() *FunctionSignature {
 	return nil
 }
 
+// IsStructType checks if the type represents a struct
+func (t *Type) IsStructType() bool {
+	return t.StructName != ""
+}
+
+// GetStructFields returns the struct fields if this is a struct type
+func (t *Type) GetStructFields() []*FieldDecl {
+	if t.IsStructType() {
+		return t.StructFields
+	}
+	return nil
+}
+
 // String method for better debugging
 func (t *Type) String() string {
 	if t.BaseType != "" {
@@ -426,6 +443,15 @@ func (t *Type) String() string {
 		return fmt.Sprintf("*%s", t.PointerType.String())
 	}
 	if t.StructName != "" {
+		if len(t.StructFields) > 0 {
+			var s string
+			s += fmt.Sprintf("struct %s {", t.StructName)
+			for _, field := range t.StructFields {
+				s += fmt.Sprintf("\n\t%s : %s;", field.Name.Name, field.Type.String())
+			}
+			s += "\n}"
+			return s
+		}
 		return fmt.Sprintf("struct %s", t.StructName)
 	}
 	return "unknown"

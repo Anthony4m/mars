@@ -143,6 +143,7 @@ func (a *Analyzer) collectVariableDeclaration(decl *ast.VarDecl) error {
 
 			// Add note about original declaration
 			if original, _ := a.symbols.Resolve(decl.Name.Name); original != nil && original.DeclaredAt != nil {
+				//TODO: Think about what to do about original.DeclaredAt
 				//origPos := (*original.DeclaredAt).Pos()
 				// You could enhance this to show the original location
 			}
@@ -153,8 +154,12 @@ func (a *Analyzer) collectVariableDeclaration(decl *ast.VarDecl) error {
 }
 
 func (a *Analyzer) collectFunctionDeclaration(decl *ast.FuncDecl) error {
-	// 1. Create the function's type directly from the signature in the AST.
-	//    It's guaranteed to be there and be complete.
+	// 1. Create the function's type from the signature.
+	// TODO: This needs to be enhanced to handle:
+	// - Type cycles (e.g. mutually recursive function types)
+	// - Future generic type parameters
+	// - Return type inference
+	// For now we assume the parser has validated the basic signature structure
 	funcType := ast.NewFunctionType(decl.Signature)
 
 	// 2. Add the function with its full signature to the symbol table.
@@ -190,14 +195,65 @@ func (a *Analyzer) checkFunctionBody(decl *ast.FuncDecl) error {
 }
 
 func (a *Analyzer) collectStructDeclaration(decl *ast.StructDecl) error {
-	structType := &ast.Type{BaseType: "struct"}
 	if decl.Name == nil {
 		return fmt.Errorf("struct declaration must have a name")
 	}
-	// 1. Add struct type to global scope
+
+	// 1. Create a proper struct type with the struct name and fields
+	structType := ast.NewStructType(decl.Name.Name, decl.Fields)
+
+	// 2. Add the struct type to the symbol table immediately (for cycle safety)
 	err := a.symbols.Define(decl.Name.Name, *structType, false, false, decl)
 	if err != nil {
+		a.errors.AddErrorWithHelp(
+			decl.Name.Position,
+			errors.ErrCodeDuplicateDecl,
+			fmt.Sprintf("struct '%s' is already defined in this scope", decl.Name.Name),
+			"give this struct a different name",
+		)
 		return err
+	}
+
+	// 3. Process struct fields for validation
+	if decl.Fields != nil {
+		// Track field names for uniqueness checking
+		fieldNames := make(map[string]bool)
+
+		for _, field := range decl.Fields {
+			if field.Name == nil || field.Type == nil {
+				a.errors.AddError(
+					field.Position,
+					errors.ErrCodeSyntaxError,
+					"struct field must have both a name and type",
+				)
+				continue
+			}
+
+			// Check for duplicate field names
+			if fieldNames[field.Name.Name] {
+				a.errors.AddErrorWithHelp(
+					field.Name.Position,
+					errors.ErrCodeDuplicateDecl,
+					fmt.Sprintf("duplicate field name '%s' in struct '%s'", field.Name.Name, decl.Name.Name),
+					"each field name must be unique within a struct",
+				)
+				continue
+			}
+
+			if field.Type.BaseType == "" && field.Type.StructName == "" &&
+				field.Type.ArrayType == nil && field.Type.PointerType == nil {
+				a.errors.AddError(
+					field.Type.Position,
+					errors.ErrCodeTypeError,
+					fmt.Sprintf("invalid type for field '%s'", field.Name.Name),
+				)
+			}
+
+			fieldNames[field.Name.Name] = true
+
+			// Note: We don't define fields in the current scope here
+			// Fields are only accessible through struct instances, not in the struct declaration scope
+		}
 	}
 
 	return nil
