@@ -1,6 +1,7 @@
 package analyzer
 
 import (
+	"fmt"
 	"mars/ast"
 )
 
@@ -23,51 +24,51 @@ func (ic *ImmutabilityChecker) CheckAssignment(target ast.Expression, value ast.
 	return nil
 }
 
-//// CheckMutation verifies that a mutation operation is valid
-//func (ic *ImmutabilityChecker) CheckMutation(expr ast.Expression) error {
-//	switch e := expr.(type) {
-//	case *ast.Identifier:
-//		return ic.checkIdentifierMutation(e)
-//	case *ast.MemberExpr:
-//		return ic.checkMemberMutation(e)
-//	case *ast.IndexExpr:
-//		return ic.checkIndexMutation(e)
-//	default:
-//		return fmt.Errorf("cannot mutate expression of type %T", expr)
-//	}
-//}
-//
-//// checkIdentifierMutation verifies that an identifier can be mutated
-//func (ic *ImmutabilityChecker) checkIdentifierMutation(id *ast.Identifier) error {
-//	// TODO: Look up identifier in symbol table and check if mutable
-//	return nil
-//}
-//
-//// checkMemberMutation verifies that a struct member can be mutated
-//func (ic *ImmutabilityChecker) checkMemberMutation(expr *ast.MemberExpr) error {
-//	// TODO: Check if struct field is mutable
-//	return nil
-//}
-//
-//// checkIndexMutation verifies that an array element can be mutated
-//func (ic *ImmutabilityChecker) checkIndexMutation(expr *ast.IndexExpr) error {
-//	// TODO: Check if array element type is mutable
-//	return nil
-//}
-//
-//// IsMutableType determines if a type is mutable
-//func (ic *ImmutabilityChecker) IsMutableType(typ ast.Type) bool {
-//	switch t := typ.(type) {
-//	case *ast.BasicType:
-//		return false // Basic types are always immutable
-//	case *ast.ArrayType:
-//		return ic.IsMutableType(t.ElementType)
-//	case *ast.StructType:
-//		// TODO: Check if any fields are mutable
-//		return false
-//	case *ast.PointerType:
-//		return true // Pointers are always mutable
-//	default:
-//		return false
-//	}
-//}
+// CheckMutation verifies that a mutation operation is valid
+func (ic *ImmutabilityChecker) CheckMutation(expr ast.Expression) error {
+	switch e := expr.(type) {
+	case *ast.Identifier:
+		return ic.checkIdentifierMutation(e)
+	case *ast.MemberExpr:
+		return ic.checkMemberMutation(e)
+	case *ast.IndexExpr:
+		return ic.checkIndexMutation(e)
+	default:
+		return fmt.Errorf("cannot mutate expression of type %T", expr)
+	}
+}
+
+// checkIdentifierMutation verifies that an identifier can be mutated
+func (ic *ImmutabilityChecker) checkIdentifierMutation(id *ast.Identifier) error {
+	// TODO: Look up identifier in symbol table and check if mutable
+	return nil
+}
+
+// checkMemberMutation verifies that a struct member can be mutated
+func (ic *ImmutabilityChecker) checkMemberMutation(expr *ast.MemberExpr) error {
+	// TODO: Check if struct field is mutable
+	return nil
+}
+
+// checkIndexMutation verifies that an array element can be mutated
+func (ic *ImmutabilityChecker) checkIndexMutation(expr *ast.IndexExpr) error {
+	// TODO: Check if array element type is mutable
+	return nil
+}
+
+// IsMutableType determines if a type is mutable
+func (ic *ImmutabilityChecker) IsMutableType(typ ast.Type) bool {
+	switch t := typ.(type) {
+	case *ast.BasicType:
+		return false // Basic types are always immutable
+	case *ast.ArrayType:
+		return ic.IsMutableType(t.ElementType)
+	case *ast.StructType:
+		// TODO: Check if any fields are mutable
+		return false
+	case *ast.PointerType:
+		return true // Pointers are always mutable
+	default:
+		return false
+	}
+}

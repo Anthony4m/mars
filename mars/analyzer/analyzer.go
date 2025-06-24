@@ -41,7 +41,7 @@ func (a *Analyzer) Analyze(node ast.Node) error {
 	}
 
 	// Second pass: type checking and immutability analysis
-	if err := a.checkTypes(node); err != nil {
+	if err := a.CheckExpression(node); err != nil {
 		return err
 	}
 
@@ -93,60 +93,85 @@ func (a *Analyzer) collectDeclarations(node ast.Node) error {
 	return nil
 }
 
-func (a *Analyzer) collectVariableDeclaration(decl *ast.VarDecl) error {
-	var varType *ast.Type
+func (a *Analyzer) CheckVarDecl(decl *ast.VarDecl) {
+	// 1) resolve symbol (must have been defined in pass 1)
+	sym, err := a.symbols.Resolve(decl.Name.Name)
+	if err != nil {
+		help := fmt.Sprintf("declare variable %q before use", decl.Name.Name)
+		a.errors.AddErrorWithHelp(
+			decl.Name.Position,
+			errors.ErrCodeUndefinedVar,
+			fmt.Sprintf("variable %q not found", decl.Name.Name),
+			help,
+		)
+		return
+	}
 
-	if decl.Type != nil && decl.Value != nil {
-		// Both explicit type and value - check compatibility
-		varType = decl.Type
-		inferredType := a.inferType(decl.Value)
+	declared := sym.Type // ast.Type
+	hasAnnot := decl.Type != nil
+	hasInit := decl.Value != nil
 
-		if !a.typesCompatible(varType, inferredType) {
-			help := fmt.Sprintf("change type to '%s' or cast the value", inferredType.BaseType)
+	switch {
+	// 1) explicit type + initializer → check compatibility
+	case hasAnnot && hasInit:
+		actual := a.types.inferType(decl.Value)
+		if !a.types.typesCompatible(&declared, actual) {
+			help := fmt.Sprintf("cast the value to %s or change the variable’s type", declared.BaseType)
 			a.errors.AddErrorWithHelp(
 				decl.Name.Position,
 				errors.ErrCodeTypeError,
-				fmt.Sprintf("mismatched types: expected '%s', found '%s'",
-					varType.BaseType, inferredType.BaseType),
+				fmt.Sprintf("mismatched types: expected %s, found %s", declared.BaseType, actual.BaseType),
 				help,
 			)
 		}
-	} else if decl.Type != nil {
-		varType = decl.Type
-	} else if decl.Value != nil {
-		varType = a.inferType(decl.Value)
-		if varType == nil || varType.BaseType == "unknown" {
+
+	// 2) explicit type only → nothing more to check
+	case hasAnnot:
+		// ok
+
+	// 3) initializer only (x := e) → infer
+	case hasInit:
+		actual := a.types.inferType(decl.Value)
+		if actual.BaseType == "unknown" {
 			a.errors.AddError(
 				decl.Name.Position,
 				errors.ErrCodeTypeError,
-				fmt.Sprintf("cannot infer type for variable '%s'", decl.Name.Name),
+				fmt.Sprintf("cannot infer type for variable %q", decl.Name.Name),
 			)
 		}
-	} else {
-		a.errors.AddError(
+
+	// 4) neither → error
+	default:
+		a.errors.AddErrorWithHelp(
 			decl.Name.Position,
 			errors.ErrCodeSyntaxError,
-			fmt.Sprintf("variable '%s' needs either a type annotation or an initial value",
-				decl.Name.Name),
+			fmt.Sprintf("variable %q needs a type annotation or an initializer", decl.Name.Name),
+			"add `: T` or `:= value` to the declaration",
 		)
 	}
+}
 
-	// Check for duplicate declarations
-	if varType != nil {
-		if err := a.symbols.Define(decl.Name.Name, *varType, decl.Mutable, false, decl); err != nil {
-			a.errors.AddErrorWithHelp(
-				decl.Name.Position,
-				errors.ErrCodeDuplicateDecl,
-				fmt.Sprintf("variable '%s' is already defined in this scope", decl.Name.Name),
-				"give this variable a different name",
-			)
+func (a *Analyzer) collectVariableDeclaration(decl *ast.VarDecl) error {
+	var varType ast.Type
+	if decl.Type != nil {
+		varType = *decl.Type
+	} else if decl.Value != nil {
+		varType = *a.types.inferType(decl.Value)
+	}
 
-			// Add note about original declaration
-			if original, _ := a.symbols.Resolve(decl.Name.Name); original != nil && original.DeclaredAt != nil {
-				//TODO: Think about what to do about original.DeclaredAt
-				//origPos := (*original.DeclaredAt).Pos()
-				// You could enhance this to show the original location
-			}
+	if err := a.symbols.Define(decl.Name.Name, varType, decl.Mutable, false, decl); err != nil {
+		a.errors.AddErrorWithHelp(
+			decl.Name.Position,
+			errors.ErrCodeDuplicateDecl,
+			fmt.Sprintf("variable '%s' is already defined in this scope", decl.Name.Name),
+			"give this variable a different name",
+		)
+
+		// Add note about original declaration
+		if original, _ := a.symbols.Resolve(decl.Name.Name); original != nil && original.DeclaredAt != nil {
+			//TODO: Think about what to do about original.DeclaredAt
+			//origPos := (*original.DeclaredAt).Pos()
+			// You could enhance this to show the original location
 		}
 	}
 
@@ -191,7 +216,7 @@ func (a *Analyzer) checkFunctionBody(decl *ast.FuncDecl) error {
 
 	// Now check the body - recursion is safe because
 	// the function name is already in the symbol table
-	return a.checkTypes(decl.Body)
+	return a.CheckExpression(decl.Body)
 }
 
 func (a *Analyzer) collectStructDeclaration(decl *ast.StructDecl) error {
@@ -271,18 +296,23 @@ func (a *Analyzer) collectUnsafeBlock(block *ast.UnsafeBlock) error {
 	// We just look for declarations inside it
 }
 
-// checkTypes performs type checking on the AST
-func (a *Analyzer) checkTypes(node ast.Node) error {
+// CheckExpression performs type checking on the AST
+func (a *Analyzer) CheckExpression(node ast.Node) error {
 	switch n := node.(type) {
 	case *ast.Program:
 		for _, decl := range n.Declarations {
-			if err := a.checkTypes(decl); err != nil {
+			if err := a.CheckExpression(decl); err != nil {
 				return err
 			}
 		}
 
 	case *ast.FuncDecl:
 		return a.checkFunctionBody(n)
+	case *ast.VarDecl:
+		a.CheckVarDecl(n)
+		return nil
+	case ast.Expression:
+		return nil
 	default:
 		return nil
 	}
@@ -295,73 +325,32 @@ func (a *Analyzer) checkImmutability(node ast.Node) error {
 	return nil
 }
 
-// typesCompatible checks if two types are compatible for assignment
-func (a *Analyzer) typesCompatible(expected, actual *ast.Type) bool {
-	if expected == nil || actual == nil {
-		return false
+// TODO: Verify this correctness
+func (a *Analyzer) CheckAssignment(stmt *ast.AssignmentStatement) {
+	// 1) resolve the variable
+	sym, err := a.symbols.Resolve(stmt.Name.Name)
+	if err != nil {
+		// undefined‐variable error
+		return
 	}
 
-	// For now, simple base type comparison
-	if expected.BaseType != actual.BaseType {
-		return false
+	// 2) if the symbol was declared immutable, error
+	if !sym.IsMutable {
+		a.errors.AddError(
+			stmt.Name.Position,
+			errors.ErrCodeImmutable,
+			fmt.Sprintf("cannot assign to immutable variable %q", stmt.Name.Name),
+		)
+		// still continue so we can report other errors
 	}
 
-	// Special handling for function types
-	if expected.IsFunctionType() && actual.IsFunctionType() {
-		return a.functionSignaturesCompatible(
-			expected.GetFunctionSignature(),
-			actual.GetFunctionSignature(),
+	// 3) type‐check the right‐hand side
+	actual := a.types.inferType(stmt.Value)
+	if !a.types.typesCompatible(&sym.Type, actual) {
+		a.errors.AddError(
+			stmt.Name.Position,
+			errors.ErrCodeTypeError,
+			fmt.Sprintf("cannot assign %s to %s", actual.BaseType, sym.Type.BaseType),
 		)
 	}
-
-	return true
-}
-
-// functionSignaturesCompatible checks if two function signatures are compatible
-func (a *Analyzer) functionSignaturesCompatible(expected, actual *ast.FunctionSignature) bool {
-	if expected == nil || actual == nil {
-		return false
-	}
-
-	// Check parameter count
-	if len(expected.Parameters) != len(actual.Parameters) {
-		return false
-	}
-
-	// Check parameter types
-	for i, expectedParam := range expected.Parameters {
-		actualParam := actual.Parameters[i]
-		if !a.typesCompatible(expectedParam.Type, actualParam.Type) {
-			return false
-		}
-	}
-
-	// Check return type
-	if expected.ReturnType == nil && actual.ReturnType == nil {
-		return true
-	}
-	if expected.ReturnType == nil || actual.ReturnType == nil {
-		return false
-	}
-
-	return a.typesCompatible(expected.ReturnType, actual.ReturnType)
-}
-
-func (a *Analyzer) inferType(expr ast.Expression) *ast.Type {
-	switch e := expr.(type) {
-	case *ast.Literal:
-		switch e.Value.(type) {
-		case int, int64:
-			return &ast.Type{BaseType: "int"}
-		case float64:
-			return &ast.Type{BaseType: "float"}
-		case string:
-			return &ast.Type{BaseType: "string"}
-		case bool:
-			return &ast.Type{BaseType: "bool"}
-		}
-	}
-
-	// For now, default to unknown
-	return &ast.Type{BaseType: "unknown"}
 }
