@@ -25,7 +25,7 @@ func (tc *TypeChecker) CheckType(expr ast.Expression, expected ast.Type) error {
 }
 
 // InferType determines the type of an expression
-func (tc *TypeChecker) inferType(expr ast.Expression) *ast.Type {
+func (tc *TypeChecker) inferType(expr interface{}) *ast.Type {
 	switch e := expr.(type) {
 	case *ast.Literal:
 		switch e.Value.(type) {
