@@ -414,7 +414,7 @@ func (t *Type) GetFunctionSignature() *FunctionSignature {
 
 // IsStructType checks if the type represents a struct
 func (t *Type) IsStructType() bool {
-	return t.StructName != ""
+	return t.BaseType != "struct"
 }
 
 // GetStructFields returns the struct fields if this is a struct type
