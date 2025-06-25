@@ -178,6 +178,9 @@ const (
 	ErrCodeInvalidType    = "E0005"
 	ErrCodeUnsafeError    = "E0006"
 	ErrCodeImmutableError = "E0007"
+	ErrCodeUndefinedField = "E0008"
+	ErrCodeUndefinedType  = "E0009"
+	ErrCodeImmutable      = "E0010"
 
 	WarnCodeUnusedVar    = "W0001"
 	WarnCodeUnusedImport = "W0002"
