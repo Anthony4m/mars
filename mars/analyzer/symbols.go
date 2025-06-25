@@ -11,7 +11,7 @@ type Symbol struct {
 	Type       ast.Type
 	IsMutable  bool
 	IsFunction bool
-	DeclaredAt *ast.Node
+	DeclaredAt ast.Node
 	Scope      *Scope
 }
 
@@ -65,7 +65,7 @@ func (st *SymbolTable) Define(name string, typ ast.Type, isMutable, isFunction b
 		IsMutable:  isMutable,
 		IsFunction: isFunction,
 		Scope:      st.CurrentScope,
-		DeclaredAt: &declaredAt,
+		DeclaredAt: declaredAt,
 	}
 	return nil
 }
