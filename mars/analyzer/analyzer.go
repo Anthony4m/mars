@@ -510,6 +510,11 @@ func (a *Analyzer) CheckTypes(node ast.Node) error {
 		}
 		// TODO: Verify field exists on struct
 		return nil
+	case *ast.UnsafeBlock:
+		a.symbols.EnterScope()
+		defer a.symbols.ExitScope()
+		// Check all statements in a block
+		return a.CheckTypes(n.Body)
 	default:
 		return nil
 	}
