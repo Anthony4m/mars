@@ -2,6 +2,7 @@ package analyzer
 
 import (
 	"fmt"
+	"go/types"
 	"mars/ast"
 	"mars/errors"
 )
@@ -41,7 +42,7 @@ func (a *Analyzer) Analyze(node ast.Node) error {
 	}
 
 	// Second pass: type checking and immutability analysis
-	if err := a.CheckExpression(node); err != nil {
+	if err := a.CheckTypes(node); err != nil {
 		return err
 	}
 
@@ -93,7 +94,7 @@ func (a *Analyzer) collectDeclarations(node ast.Node) error {
 	return nil
 }
 
-func (a *Analyzer) CheckVarDecl(decl *ast.VarDecl) {
+func (a *Analyzer) CheckVarDecl(decl *ast.VarDecl) error {
 	// 1) resolve symbol (must have been defined in pass 1)
 	sym, err := a.symbols.Resolve(decl.Name.Name)
 	if err != nil {
@@ -104,7 +105,7 @@ func (a *Analyzer) CheckVarDecl(decl *ast.VarDecl) {
 			fmt.Sprintf("variable %q not found", decl.Name.Name),
 			help,
 		)
-		return
+		return nil
 	}
 
 	declared := sym.Type // ast.Type
@@ -178,6 +179,19 @@ func (a *Analyzer) collectVariableDeclaration(decl *ast.VarDecl) error {
 	return nil
 }
 
+func (a *Analyzer) CheckLiteral(lit *ast.Literal) error {
+	// inferType accepts an Expression, so pass the nod e itself
+	inferred := a.types.inferType(lit)
+	if inferred.BaseType == "unknown" {
+		a.errors.AddError(
+			lit.Position,
+			errors.ErrCodeTypeError,
+			fmt.Sprintf("cannot determine type for literal %v", lit.Value),
+		)
+	}
+	return nil
+}
+
 func (a *Analyzer) collectFunctionDeclaration(decl *ast.FuncDecl) error {
 	// 1. Create the function's type from the signature.
 	// TODO: This needs to be enhanced to handle:
@@ -216,7 +230,7 @@ func (a *Analyzer) checkFunctionBody(decl *ast.FuncDecl) error {
 
 	// Now check the body - recursion is safe because
 	// the function name is already in the symbol table
-	return a.CheckExpression(decl.Body)
+	return a.CheckTypes(decl.Body)
 }
 
 func (a *Analyzer) collectStructDeclaration(decl *ast.StructDecl) error {
@@ -296,12 +310,12 @@ func (a *Analyzer) collectUnsafeBlock(block *ast.UnsafeBlock) error {
 	// We just look for declarations inside it
 }
 
-// CheckExpression performs type checking on the AST
-func (a *Analyzer) CheckExpression(node ast.Node) error {
+// CheckTypes performs type checking on the AST
+func (a *Analyzer) CheckTypes(node ast.Node) error {
 	switch n := node.(type) {
 	case *ast.Program:
 		for _, decl := range n.Declarations {
-			if err := a.CheckExpression(decl); err != nil {
+			if err := a.CheckTypes(decl); err != nil {
 				return err
 			}
 		}
@@ -309,12 +323,61 @@ func (a *Analyzer) CheckExpression(node ast.Node) error {
 	case *ast.FuncDecl:
 		return a.checkFunctionBody(n)
 	case *ast.VarDecl:
-		a.CheckVarDecl(n)
-		return nil
-	case ast.Expression:
-		return nil
+		return a.CheckVarDecl(n)
+	case *ast.Literal:
+		return a.CheckLiteral(n)
+	case *ast.Identifier:
+		return a.checkIdentifier(n)
+	case *ast.BinaryExpression:
+		return a.checkBinaryExpression(n)
+	case *ast.ExpressionStatement:
+		// Check the expression within the statement
+		if n.Expression != nil {
+			return a.CheckTypes(n.Expression)
+		}
+	case *ast.BlockStatement:
+		// Check all statements in a block
+		for _, stmt := range n.Statements {
+			if err := a.CheckTypes(stmt); err != nil {
+				return err
+			}
+		}
+	case *ast.FunctionCall:
+		return a.checkFunctionCall(n)
+
+	case *ast.StructLiteral:
+		return a.checkStructLiteral(n)
+
+	case *ast.IfStatement:
+		// Check condition is boolean
+		if err := a.CheckTypes(n.Condition); err != nil {
+			return err
+		}
+		condType := a.inferExpressionType(n.Condition)
+		if condType.BaseType != "bool" {
+			a.errors.AddError(
+				n.Condition.Pos(),
+				errors.ErrCodeTypeError,
+				fmt.Sprintf("condition must be boolean, found '%s'", condType.BaseType),
+			)
+		}
+	case *ast.ReturnStatement:
+		// TODO: Check return type matches function signature
+		if n.Value != nil {
+			return a.CheckTypes(n.Value)
+		}
+	case *ast.UnaryExpression:
+		return a.CheckTypes(n.Right)
 	default:
 		return nil
+	}
+	return nil
+}
+
+func (a *Analyzer) checkIdentifier(ident *ast.Identifier) error {
+	_, err := a.symbols.Resolve(ident.Name)
+	if err != nil {
+		a.errors.AddErrorWithHelp(ident.Position, errors.ErrCodeUndefinedVar, fmt.Sprintf("undefined  %q", ident.Name), "variable must be defined before use")
 	}
 	return nil
 }
@@ -353,4 +416,216 @@ func (a *Analyzer) CheckAssignment(stmt *ast.AssignmentStatement) {
 			fmt.Sprintf("cannot assign %s to %s", actual.BaseType, sym.Type.BaseType),
 		)
 	}
+}
+
+func (a *Analyzer) checkBinaryExpression(expr *ast.BinaryExpression) error {
+	if err := a.CheckTypes(expr.Left); err != nil {
+		return err
+	}
+	if err := a.CheckTypes(expr.Right); err != nil {
+		return err
+	}
+
+	leftType := a.types.inferType(expr.Left)
+	rightType := a.types.inferType(expr.Right)
+	switch expr.Operator {
+	case "+", "-", "*", "/", "%":
+		if !isNumericType(leftType) || !isNumericType(rightType) {
+			a.errors.AddError(
+				expr.Position,
+				errors.ErrCodeTypeError,
+				fmt.Sprintf("invalid operation: %s %s %s (operator %s not defined on %s)",
+					leftType.String(), expr.Operator, rightType.String(),
+					expr.Operator, leftType.String()),
+			)
+		}
+	case "==", "!=":
+		if !a.types.typesCompatible(leftType, rightType) {
+			a.errors.AddError(
+				expr.Position,
+				errors.ErrCodeTypeError,
+				fmt.Sprintf("invalid operation: %s %s %s (mismatched types)",
+					leftType.String(), expr.Operator, rightType.String()),
+			)
+		}
+	case "<", ">", "<=", ">=":
+		// Comparison needs ordered types
+		if !isOrderedType(leftType) || !isOrderedType(rightType) {
+			a.errors.AddError(
+				expr.Position,
+				errors.ErrCodeTypeError,
+				fmt.Sprintf("invalid operation: %s %s %s (operator %s not defined on %s)",
+					leftType.String(), expr.Operator, rightType.String(),
+					expr.Operator, leftType.String()),
+			)
+		}
+	case "&&":
+		if !isBool(leftType) && !isBool(rightType) {
+			a.errors.AddError(
+				expr.Position,
+				errors.ErrCodeTypeError,
+				fmt.Sprintf("types mismatch: %s %s %s (operator %s not defined on %s)",
+					leftType.String(), expr.Operator, rightType.String(),
+					expr.Operator, leftType.String()),
+			)
+		}
+
+	}
+	return nil
+}
+
+func (a *Analyzer) checkFunctionCall(call *ast.FunctionCall) error {
+	if err := a.CheckTypes(call.Function); err != nil {
+		return err
+	}
+
+	for _, arg := range call.Arguments {
+		if err := a.CheckTypes(arg); err != nil {
+			return err
+		}
+	}
+
+	ident, ok := call.Function.(*ast.Identifier)
+	if !ok {
+		// TODO: Handle method calls, function expressions
+		return nil
+	}
+
+	sym, err := a.symbols.Resolve(ident.Name)
+	if err != nil {
+		return err
+	}
+
+	if !sym.IsFunction {
+		a.errors.AddError(
+			call.Position,
+			errors.ErrCodeTypeError,
+			fmt.Sprintf("'%s' is not a function", ident.Name),
+		)
+		return nil
+	}
+
+	funcSig := sym.Type.GetFunctionSignature()
+	if funcSig == nil {
+		return nil
+	}
+
+	//check argument count
+	if len(call.Arguments) != len(funcSig.Parameters) {
+		a.errors.AddErrorWithHelp(
+			call.Position,
+			errors.ErrCodeTypeError,
+			fmt.Sprintf("wrong number of arguments in call to '%s'", ident.Name),
+			fmt.Sprintf("expected %d arguments, got %d",
+				len(funcSig.Parameters), len(call.Arguments)),
+		)
+		return nil
+	}
+
+	//chack argument types
+	for i, arg := range call.Arguments {
+		argType := a.types.inferType(arg)
+		paramType := funcSig.Parameters[i].Type
+
+		if !a.types.typesCompatible(paramType, argType) {
+			paramName := funcSig.Parameters[i].Name.Name
+			a.errors.AddErrorWithHelp(
+				arg.Pos(),
+				errors.ErrCodeTypeError,
+				fmt.Sprintf("cannot use '%s' as type '%s' in argument to '%s'",
+					argType.String(), paramType.String(), ident.Name),
+				fmt.Sprintf("parameter '%s' expects type '%s'",
+					paramName, paramType.String()),
+			)
+		}
+	}
+	return nil
+}
+
+func (a *Analyzer) inferExpressionType(expr ast.Expression) *ast.Type {
+	switch e := expr.(type) {
+	case *ast.Literal:
+		return a.types.inferType(expr)
+
+	case *ast.Identifier:
+		symbol, err := a.symbols.Resolve(e.Name)
+		if err != nil {
+			return &ast.Type{BaseType: "unknown"}
+		}
+		return &symbol.Type
+
+	case *ast.FunctionCall:
+		// Get return type of the function
+		if ident, ok := e.Function.(*ast.Identifier); ok {
+			symbol, err := a.symbols.Resolve(ident.Name)
+			if err == nil && symbol.IsFunction {
+				sig := symbol.Type.GetFunctionSignature()
+				if sig != nil && sig.ReturnType != nil {
+					return sig.ReturnType
+				}
+			}
+		}
+		return &ast.Type{BaseType: "void"} // No return type
+
+	case *ast.BinaryExpression:
+		leftType := a.inferExpressionType(e.Left)
+		rightType := a.inferExpressionType(e.Right)
+
+		switch e.Operator {
+		case "+", "-", "*", "/", "%":
+			// Arithmetic operators
+			if leftType.BaseType == "float" || rightType.BaseType == "float" {
+				return &ast.Type{BaseType: "float"}
+			}
+			return leftType
+
+		case "==", "!=", "<", ">", "<=", ">=":
+			// Comparison operators
+			return &ast.Type{BaseType: "bool"}
+
+		case "&&", "||":
+			// Logical operators
+			return &ast.Type{BaseType: "bool"}
+
+		default:
+			return &ast.Type{BaseType: "unknown"}
+		}
+
+	case *ast.UnaryExpression:
+		switch e.Operator {
+		case "!":
+			return &ast.Type{BaseType: "bool"}
+		case "-":
+			return a.inferExpressionType(e.Right)
+		default:
+			return &ast.Type{BaseType: "unknown"}
+		}
+
+	case *ast.ArrayLiteral:
+		// Infer array type from first element
+		if len(e.Elements) > 0 {
+			elemType := a.inferExpressionType(e.Elements[0])
+			return &ast.Type{
+				ArrayType: elemType,
+				// ArraySize could be set to len(e.Elements) for fixed arrays
+			}
+		}
+		return &ast.Type{BaseType: "unknown"}
+
+	default:
+		return &ast.Type{BaseType: "unknown"}
+	}
+}
+
+func isBool(t *ast.Type) bool {
+	return t.BaseType == "bool"
+}
+
+// Helper functions
+func isNumericType(t *ast.Type) bool {
+	return t.BaseType == "int" || t.BaseType == "float"
+}
+
+func isOrderedType(t *ast.Type) bool {
+	return isNumericType(t) || t.BaseType == "string"
 }
