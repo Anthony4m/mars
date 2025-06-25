@@ -2,19 +2,19 @@ package analyzer
 
 import (
 	"fmt"
-	"go/types"
 	"mars/ast"
 	"mars/errors"
 )
 
 // Analyzer performs semantic analysis on the AST
 type Analyzer struct {
-	errors     *errors.MarsReporter
-	symbols    *SymbolTable
-	types      *TypeChecker
-	immutable  *ImmutabilityChecker
-	sourceCode string
-	filename   string
+	errors          *errors.MarsReporter
+	symbols         *SymbolTable
+	types           *TypeChecker
+	immutable       *ImmutabilityChecker
+	sourceCode      string
+	filename        string
+	currentFunction *ast.FuncDecl
 }
 
 // New creates a new analyzer instance
@@ -150,6 +150,7 @@ func (a *Analyzer) CheckVarDecl(decl *ast.VarDecl) error {
 			"add `: T` or `:= value` to the declaration",
 		)
 	}
+	return nil
 }
 
 func (a *Analyzer) collectVariableDeclaration(decl *ast.VarDecl) error {
@@ -219,6 +220,10 @@ func (a *Analyzer) checkFunctionBody(decl *ast.FuncDecl) error {
 	// Enter function scope
 	a.symbols.EnterScope()
 	defer a.symbols.ExitScope()
+
+	prevFunc := a.currentFunction
+	a.currentFunction = decl
+	defer func() { a.currentFunction = prevFunc }()
 
 	// Add parameters to local scope
 	for _, param := range decl.Signature.Parameters {
@@ -336,6 +341,8 @@ func (a *Analyzer) CheckTypes(node ast.Node) error {
 			return a.CheckTypes(n.Expression)
 		}
 	case *ast.BlockStatement:
+		a.symbols.EnterScope()
+		defer a.symbols.ExitScope()
 		// Check all statements in a block
 		for _, stmt := range n.Statements {
 			if err := a.CheckTypes(stmt); err != nil {
@@ -349,7 +356,7 @@ func (a *Analyzer) CheckTypes(node ast.Node) error {
 		return a.checkStructLiteral(n)
 
 	case *ast.IfStatement:
-		// Check condition is boolean
+		// Check condition
 		if err := a.CheckTypes(n.Condition); err != nil {
 			return err
 		}
@@ -361,13 +368,148 @@ func (a *Analyzer) CheckTypes(node ast.Node) error {
 				fmt.Sprintf("condition must be boolean, found '%s'", condType.BaseType),
 			)
 		}
-	case *ast.ReturnStatement:
-		// TODO: Check return type matches function signature
-		if n.Value != nil {
-			return a.CheckTypes(n.Value)
+
+		// Check consequence block
+		if n.Consequence != nil {
+			if err := a.CheckTypes(n.Consequence); err != nil {
+				return err
+			}
 		}
+
+		// Check alternative block (else)
+		if n.Alternative != nil {
+			if err := a.CheckTypes(n.Alternative); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	case *ast.ReturnStatement:
+		if a.currentFunction == nil {
+			a.errors.AddError(
+				n.Position,
+				errors.ErrCodeSyntaxError,
+				"return statement outside function",
+			)
+			return nil
+		}
+
+		sig := a.currentFunction.Signature
+		if n.Value == nil {
+			// Empty return
+			if sig.ReturnType != nil {
+				a.errors.AddError(
+					n.Position,
+					errors.ErrCodeTypeError,
+					fmt.Sprintf("function '%s' should return '%s'",
+						a.currentFunction.Name.Name, sig.ReturnType.String()),
+				)
+			}
+		} else {
+			// Check return value
+			if err := a.CheckTypes(n.Value); err != nil {
+				return err
+			}
+
+			if sig.ReturnType == nil {
+				a.errors.AddError(
+					n.Position,
+					errors.ErrCodeTypeError,
+					"function has no return type but returns a value",
+				)
+			} else {
+				returnType := a.inferExpressionType(n.Value)
+				if !a.types.typesCompatible(sig.ReturnType, returnType) {
+					a.errors.AddError(
+						n.Position,
+						errors.ErrCodeTypeError,
+						fmt.Sprintf("cannot return '%s' from function with return type '%s'",
+							returnType.String(), sig.ReturnType.String()),
+					)
+				}
+			}
+		}
+		return nil
 	case *ast.UnaryExpression:
 		return a.CheckTypes(n.Right)
+	case *ast.AssignmentStatement:
+		return a.CheckAssignment(n)
+
+	case *ast.ForStatement:
+		// Check initialization, condition, and post statements
+		if n.Init != nil {
+			if err := a.CheckTypes(n.Init); err != nil {
+				return err
+			}
+		}
+		if n.Condition != nil {
+			if err := a.CheckTypes(n.Condition); err != nil {
+				return err
+			}
+			// Verify condition is boolean
+			condType := a.inferExpressionType(n.Condition)
+			if condType.BaseType != "bool" {
+				a.errors.AddError(
+					n.Condition.Pos(),
+					errors.ErrCodeTypeError,
+					"for loop condition must be boolean",
+				)
+			}
+		}
+		if n.Post != nil {
+			if err := a.CheckTypes(n.Post); err != nil {
+				return err
+			}
+		}
+		// Check body
+		return a.CheckTypes(n.Body)
+
+	case *ast.PrintStatement:
+		// Check the expression being printed
+		if n.Expression != nil {
+			return a.CheckTypes(n.Expression)
+		}
+
+	case *ast.BreakStatement, *ast.ContinueStatement:
+		// TODO: Verify these are inside loops
+		return nil
+
+	case *ast.ArrayLiteral:
+		// Check all elements have compatible types
+		for _, elem := range n.Elements {
+			if err := a.CheckTypes(elem); err != nil {
+				return err
+			}
+		}
+		// TODO: Verify all elements have same type
+		return nil
+
+	case *ast.IndexExpression:
+		// Check array and index
+		if err := a.CheckTypes(n.Object); err != nil {
+			return err
+		}
+		if err := a.CheckTypes(n.Index); err != nil {
+			return err
+		}
+		// Verify index is integer
+		indexType := a.inferExpressionType(n.Index)
+		if indexType.BaseType != "int" {
+			a.errors.AddError(
+				n.Index.Pos(),
+				errors.ErrCodeTypeError,
+				"array index must be integer",
+			)
+		}
+		return nil
+
+	case *ast.MemberExpression:
+		// Check struct field access
+		if err := a.CheckTypes(n.Object); err != nil {
+			return err
+		}
+		// TODO: Verify field exists on struct
+		return nil
 	default:
 		return nil
 	}
@@ -389,12 +531,12 @@ func (a *Analyzer) checkImmutability(node ast.Node) error {
 }
 
 // TODO: Verify this correctness
-func (a *Analyzer) CheckAssignment(stmt *ast.AssignmentStatement) {
+func (a *Analyzer) CheckAssignment(stmt *ast.AssignmentStatement) error {
 	// 1) resolve the variable
 	sym, err := a.symbols.Resolve(stmt.Name.Name)
 	if err != nil {
 		// undefined‐variable error
-		return
+		return err
 	}
 
 	// 2) if the symbol was declared immutable, error
@@ -416,6 +558,7 @@ func (a *Analyzer) CheckAssignment(stmt *ast.AssignmentStatement) {
 			fmt.Sprintf("cannot assign %s to %s", actual.BaseType, sym.Type.BaseType),
 		)
 	}
+	return nil
 }
 
 func (a *Analyzer) checkBinaryExpression(expr *ast.BinaryExpression) error {
@@ -467,6 +610,15 @@ func (a *Analyzer) checkBinaryExpression(expr *ast.BinaryExpression) error {
 				fmt.Sprintf("types mismatch: %s %s %s (operator %s not defined on %s)",
 					leftType.String(), expr.Operator, rightType.String(),
 					expr.Operator, leftType.String()),
+			)
+		}
+
+	case "||":
+		if !isBool(leftType) || !isBool(rightType) {
+			a.errors.AddError(
+				expr.Position,
+				errors.ErrCodeTypeError,
+				fmt.Sprintf("logical operators require boolean operands"),
 			)
 		}
 
@@ -539,6 +691,72 @@ func (a *Analyzer) checkFunctionCall(call *ast.FunctionCall) error {
 			)
 		}
 	}
+	return nil
+}
+
+func (a *Analyzer) checkStructLiteral(lit *ast.StructLiteral) error {
+	// 1) Resolve the struct’s type symbol.
+	sym, err := a.symbols.Resolve(lit.Type.Name)
+	if err != nil {
+		a.errors.AddError(lit.Type.Position,
+			errors.ErrCodeUndefinedType,
+			fmt.Sprintf("unknown type %q", lit.Type.Name),
+		)
+		return nil
+	}
+
+	// 2) Ensure it really is a struct.
+	if sym.Type.StructName != lit.Type.Name {
+		a.errors.AddError(lit.Type.Position,
+			errors.ErrCodeTypeError,
+			fmt.Sprintf("%q is not a struct type", lit.Type.Name),
+		)
+		return nil
+	}
+
+	// Build a map of declared fields → types.
+	declared := make(map[string]*ast.Type, len(sym.Type.StructFields))
+	for _, f := range sym.Type.StructFields {
+		declared[f.Name.Name] = f.Type
+	}
+
+	seen := map[string]bool{}
+	for _, init := range lit.Fields {
+		name := init.Name.Name
+
+		// Duplicate in *this* literal?
+		if seen[name] {
+			a.errors.AddError(init.Position,
+				errors.ErrCodeDuplicateDecl,
+				fmt.Sprintf("duplicate field %q in literal", name),
+			)
+			continue
+		}
+
+		expected, ok := declared[name]
+		if !ok {
+			a.errors.AddError(init.Position,
+				errors.ErrCodeUndefinedField,
+				fmt.Sprintf("field %q does not exist on %s", name, lit.Type.Name),
+			)
+			continue
+		}
+
+		// 3) Type-check the initializer expression.
+		actual := a.types.inferType(init.Value)
+		if !a.types.typesCompatible(expected, actual) {
+			a.errors.AddErrorWithHelp(
+				init.Value.Pos(),
+				errors.ErrCodeTypeError,
+				fmt.Sprintf("cannot use %s to initialize field %q (type is %s)",
+					actual.BaseType, name, expected.BaseType),
+				fmt.Sprintf("field %q expects %s", name, expected.BaseType),
+			)
+		}
+
+		seen[name] = true
+	}
+
 	return nil
 }
 
