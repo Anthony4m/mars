@@ -15,17 +15,20 @@ type Analyzer struct {
 	sourceCode      string
 	filename        string
 	currentFunction *ast.FuncDecl
+	inUnsafeContext bool
 }
 
 // New creates a new analyzer instance
 func New(sourceCode, filename string) *Analyzer {
 	return &Analyzer{
-		errors:     errors.NewMarsReporter(sourceCode, filename),
-		symbols:    NewSymbolTable(),
-		types:      NewTypeChecker(),
-		immutable:  NewImmutabilityChecker(),
-		sourceCode: sourceCode,
-		filename:   filename,
+		errors:          errors.NewMarsReporter(sourceCode, filename),
+		symbols:         NewSymbolTable(),
+		types:           NewTypeChecker(),
+		immutable:       NewImmutabilityChecker(),
+		sourceCode:      sourceCode,
+		filename:        filename,
+		currentFunction: nil,
+		inUnsafeContext: false,
 	}
 }
 
@@ -475,15 +478,31 @@ func (a *Analyzer) CheckTypes(node ast.Node) error {
 		return nil
 
 	case *ast.ArrayLiteral:
+		if len(n.Elements) == 0 {
+			return nil
+		}
 		// Check all elements have compatible types
 		for _, elem := range n.Elements {
 			if err := a.CheckTypes(elem); err != nil {
 				return err
 			}
 		}
-		// TODO: Verify all elements have same type
-		return nil
+		expectedType := a.inferExpressionType(n.Elements[0])
+		for i := 1; i < len(n.Elements); i++ {
+			elem := n.Elements[i]
+			actualType := a.inferExpressionType(elem)
 
+			if !a.types.typesCompatible(expectedType, actualType) {
+				a.errors.AddErrorWithHelp(
+					elem.Pos(),
+					errors.ErrCodeTypeError,
+					fmt.Sprintf("mismatched types in array literal: found '%s', expected '%s'",
+						actualType.String(), expectedType.String()),
+					"all elements in an array literal must have the same type",
+				)
+			}
+		}
+		return nil
 	case *ast.IndexExpression:
 		// Check array and index
 		if err := a.CheckTypes(n.Object); err != nil {
@@ -508,13 +527,74 @@ func (a *Analyzer) CheckTypes(node ast.Node) error {
 		if err := a.CheckTypes(n.Object); err != nil {
 			return err
 		}
-		// TODO: Verify field exists on struct
+		objectType := a.inferExpressionType(n.Object)
+
+		// Check if the object's type is a struct.
+		if objectType.StructName == "" { // If StructName is empty, it's not a struct type
+			a.errors.AddErrorWithHelp(
+				n.Object.Pos(),
+				errors.ErrCodeTypeError,
+				fmt.Sprintf("cannot access field '%s' on non-struct type '%s'",
+					n.Property.Name, objectType.String()),
+				"member access is only allowed on struct types",
+			)
+			return nil // Stop further checking for this expression as it's fundamentally wrong
+		}
+		// Resolve the struct type symbol to get its field definitions.
+		structSym, err := a.symbols.Resolve(objectType.StructName)
+		if err != nil {
+			// This error means the struct type itself was not found in any scope.
+			a.errors.AddError(
+				n.Object.Pos(),
+				errors.ErrCodeUndefinedType,
+				fmt.Sprintf("internal error: struct type '%s' not found in symbol table", objectType.StructName),
+			)
+			return nil // Stop processing to prevent a panic.
+		}
+
+		// Search for the property (field) within the struct's fields.
+		var foundField *ast.FieldDecl // Use a pointer, which is nil by default.
+		for _, field := range structSym.Type.StructFields {
+			if field.Name.Name == n.Property.Name {
+				foundField = field // Assign the pointer directly.
+				break
+			}
+		}
+		// If the field was not found, report an error.
+		if foundField == nil { // The check is now safe and clear.
+			a.errors.AddErrorWithHelp(
+				n.Property.Pos(),             // Point the error at the field name itself.
+				errors.ErrCodeUndefinedField, // Use a more specific error code.
+				fmt.Sprintf("field '%s' does not exist on type '%s'",
+					n.Property.Name, objectType.String()),
+				fmt.Sprintf("check the spelling or define '%s' in struct '%s'",
+					n.Property.Name, objectType.StructName),
+			)
+			return nil
+		}
 		return nil
 	case *ast.UnsafeBlock:
 		a.symbols.EnterScope()
 		defer a.symbols.ExitScope()
+
+		//set the unsafe context flag
+		prevUnsafeState := a.inUnsafeContext
+		a.inUnsafeContext = true
+		defer func() { a.inUnsafeContext = prevUnsafeState }()
 		// Check all statements in a block
 		return a.CheckTypes(n.Body)
+		// Example: If you had a new AST node for pointer dereference
+	//case *ast.PointerDereferencing: // Assuming you add this AST node later
+	//	if !a.isInUnsafeBlock {
+	//		a.errors.AddErrorWithHelp(
+	//			n.Position,
+	//			errors.ErrCodeUnsafeOperation, // You might need a new error code
+	//			"pointer dereference is only allowed inside an 'unsafe' block",
+	//			"wrap this operation in an 'unsafe { ... }' block",
+	//		)
+	//	}
+	// ... then proceed with type checking the dereferenced expression ...
+	//return a.CheckTypes(n.Expression) // Assuming n.Expression is the pointer
 	default:
 		return nil
 	}
@@ -535,7 +615,6 @@ func (a *Analyzer) checkImmutability(node ast.Node) error {
 	return nil
 }
 
-// TODO: Verify this correctness
 func (a *Analyzer) CheckAssignment(stmt *ast.AssignmentStatement) error {
 	// 1) resolve the variable
 	sym, err := a.symbols.Resolve(stmt.Name.Name)
