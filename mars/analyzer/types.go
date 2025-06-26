@@ -95,25 +95,28 @@ func (tc *TypeChecker) functionSignaturesCompatible(expected, actual *ast.Functi
 }
 
 // inferIdentifierType determines the type of an identifier
-func (tc *TypeChecker) inferIdentifierType(id *ast.Identifier) ast.Type {
+func (tc *TypeChecker) inferIdentifierType(id *ast.Identifier) *ast.Type {
 	// TODO: Look up identifier in symbol table
-	return &ast.UnknownType{}
+	return &ast.Type{BaseType: "unknown"}
 }
 
 // inferBinaryExprType determines the type of a binary expression
-func (tc *TypeChecker) inferBinaryExprType(expr *ast.BinaryExpr) ast.Type {
-	leftType := tc.InferType(expr.Left)
-	rightType := tc.InferType(expr.Right)
+func (tc *TypeChecker) inferBinaryExprType(expr *ast.BinaryExpression) *ast.Type {
+	leftType := tc.inferType(expr.Left)
+	rightType := tc.inferType(expr.Right)
 
 	// TODO: Implement binary operation type rules
 	// - Arithmetic ops: numeric types
 	// - Comparison ops: boolean result
 	// - Logical ops: boolean operands and result
-	return &ast.UnknownType{}
+
+	// For now, return the left type as a placeholder
+	_ = rightType // Suppress unused variable warning
+	return leftType
 }
 
 // inferCallExprType determines the type of a function call
-func (tc *TypeChecker) inferCallExprType(expr *ast.CallExpr) ast.Type {
+func (tc *TypeChecker) inferCallExprType(expr *ast.FunctionCall) *ast.Type {
 	// TODO: Look up function in symbol table and return its return type
-	return &ast.UnknownType{}
+	return &ast.Type{BaseType: "unknown"}
 }

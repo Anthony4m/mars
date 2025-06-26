@@ -16,6 +16,7 @@ type Analyzer struct {
 	filename        string
 	currentFunction *ast.FuncDecl
 	inUnsafeContext bool
+	inLoopContext   bool
 }
 
 // New creates a new analyzer instance
@@ -29,6 +30,7 @@ func New(sourceCode, filename string) *Analyzer {
 		filename:        filename,
 		currentFunction: nil,
 		inUnsafeContext: false,
+		inLoopContext:   false,
 	}
 }
 
@@ -120,7 +122,7 @@ func (a *Analyzer) CheckVarDecl(decl *ast.VarDecl) error {
 	case hasAnnot && hasInit:
 		actual := a.types.inferType(decl.Value)
 		if !a.types.typesCompatible(&declared, actual) {
-			help := fmt.Sprintf("cast the value to %s or change the variable’s type", declared.BaseType)
+			help := fmt.Sprintf("cast the value to %s or change the variable's type", declared.BaseType)
 			a.errors.AddErrorWithHelp(
 				decl.Name.Position,
 				errors.ErrCodeTypeError,
@@ -439,6 +441,11 @@ func (a *Analyzer) CheckTypes(node ast.Node) error {
 		return a.CheckAssignment(n)
 
 	case *ast.ForStatement:
+		// Enter loop context
+		prevLoopContext := a.inLoopContext
+		a.inLoopContext = true
+		defer func() { a.inLoopContext = prevLoopContext }()
+
 		// Check initialization, condition, and post statements
 		if n.Init != nil {
 			if err := a.CheckTypes(n.Init); err != nil {
@@ -473,8 +480,26 @@ func (a *Analyzer) CheckTypes(node ast.Node) error {
 			return a.CheckTypes(n.Expression)
 		}
 
-	case *ast.BreakStatement, *ast.ContinueStatement:
-		// TODO: Verify these are inside loops
+	case *ast.BreakStatement:
+		if !a.inLoopContext {
+			a.errors.AddErrorWithHelp(
+				n.Position,
+				errors.ErrCodeSyntaxError,
+				"break statement outside loop",
+				"break can only be used inside for loops",
+			)
+		}
+		return nil
+
+	case *ast.ContinueStatement:
+		if !a.inLoopContext {
+			a.errors.AddErrorWithHelp(
+				n.Position,
+				errors.ErrCodeSyntaxError,
+				"continue statement outside loop",
+				"continue can only be used inside for loops",
+			)
+		}
 		return nil
 
 	case *ast.ArrayLiteral:
@@ -779,7 +804,7 @@ func (a *Analyzer) checkFunctionCall(call *ast.FunctionCall) error {
 }
 
 func (a *Analyzer) checkStructLiteral(lit *ast.StructLiteral) error {
-	// 1) Resolve the struct’s type symbol.
+	// 1) Resolve the struct's type symbol.
 	sym, err := a.symbols.Resolve(lit.Type.Name)
 	if err != nil {
 		a.errors.AddError(lit.Type.Position,
