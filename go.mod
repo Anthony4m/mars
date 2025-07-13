@@ -1,3 +1,3 @@
-module github.com/mars
+module mars
 
-go 1.22.6
+go 1.21
