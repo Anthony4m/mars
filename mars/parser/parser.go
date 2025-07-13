@@ -1,9 +1,10 @@
-// parser/parser.go
+// Package parser parser/parser.go
 package parser
 
 import (
 	"fmt"
 	"mars/ast"
+	"mars/errors"
 	"mars/lexer"
 	"strconv"
 )
@@ -13,18 +14,40 @@ type parser struct {
 	curToken  lexer.Token
 	peekToken lexer.Token
 	prevToken lexer.Token
-	errors    []string
+	errors    *errors.ErrorList
 }
 
 func NewParser(lexer *lexer.Lexer) *parser {
-	p := &parser{lexer: lexer, errors: []string{}}
+	p := &parser{lexer: lexer, errors: errors.NewErrorList()}
 	p.nextToken()
 	p.nextToken()
 	return p
 }
 
+// Helper function to convert token position to AST position
+func tokenToPosition(token lexer.Token) ast.Position {
+	return ast.Position{
+		Line:   token.Line,
+		Column: token.Column,
+	}
+}
+
+// Helper function to get current token position
+func (p *parser) currentPosition() ast.Position {
+	return tokenToPosition(p.curToken)
+}
+
+// Helper function to get previous token position
+func (p *parser) previousPosition() ast.Position {
+	return tokenToPosition(p.prevToken)
+}
+
 func (p *parser) recordError(message string) {
-	p.errors = append(p.errors, message)
+	p.errors.AddError(message, p.curToken.Line, p.curToken.Column)
+}
+
+func (p *parser) recordSyntaxError(message string) {
+	p.errors.Add(errors.NewSyntaxError(message, p.curToken.Line, p.curToken.Column))
 }
 
 func (p *parser) nextToken() {
@@ -37,7 +60,7 @@ func (p *parser) previousToken() lexer.Token {
 	return p.prevToken
 }
 
-func (p *parser) GetErrors() []string {
+func (p *parser) GetErrors() *errors.ErrorList {
 	return p.errors
 }
 
@@ -45,6 +68,7 @@ func (p *parser) GetErrors() []string {
 func (p *parser) ParseProgram() *ast.Program {
 	program := &ast.Program{}
 	program.Declarations = []ast.Declaration{}
+	program.Position = p.currentPosition()
 
 	for p.curToken.Type != lexer.EOF {
 		decl := p.parseDeclaration()
@@ -70,21 +94,27 @@ func (p *parser) parseType() *ast.Type {
 	case lexer.IDENT:
 		return p.parseStructTypeReference()
 	default:
-		p.recordError(fmt.Sprintf("expected type, got %s", p.curToken.Type))
+		p.recordSyntaxError(fmt.Sprintf("expected type, got %s", p.curToken.Type))
 		return nil
 	}
 }
 
 func (p *parser) parseBaseType() *ast.Type {
-	baseType := &ast.Type{BaseType: p.curToken.Literal}
+	baseType := &ast.Type{
+		BaseType: p.curToken.Literal,
+		Position: p.currentPosition(),
+	}
 	p.nextToken() // consume the type token
 	return baseType
 }
 
 func (p *parser) parseArrayOrSliceType() *ast.Type {
+	startPos := p.currentPosition()
 	p.nextToken() // consume '['
 
-	arrayType := &ast.Type{}
+	arrayType := &ast.Type{
+		Position: startPos,
+	}
 
 	// Check if it's a sized array [N] or dynamic slice []
 	if p.curTokenIs(lexer.NUMBER) {
@@ -92,7 +122,7 @@ func (p *parser) parseArrayOrSliceType() *ast.Type {
 		if size, err := strconv.Atoi(p.curToken.Literal); err == nil {
 			arrayType.ArraySize = &size
 		} else {
-			p.recordError("invalid array size")
+			p.recordSyntaxError("invalid array size")
 			return nil
 		}
 		p.nextToken() // consume size
@@ -109,16 +139,23 @@ func (p *parser) parseArrayOrSliceType() *ast.Type {
 }
 
 func (p *parser) parsePointerType() *ast.Type {
+	startPos := p.currentPosition()
 	p.nextToken() // consume '*'
 	pointeeType := p.parseType()
 	if pointeeType == nil {
 		return nil
 	}
-	return &ast.Type{PointerType: pointeeType}
+	return &ast.Type{
+		PointerType: pointeeType,
+		Position:    startPos,
+	}
 }
 
 func (p *parser) parseStructTypeReference() *ast.Type {
-	structType := &ast.Type{StructName: p.curToken.Literal}
+	structType := &ast.Type{
+		StructName: p.curToken.Literal,
+		Position:   p.currentPosition(),
+	}
 	p.nextToken() // consume struct name
 	return structType
 }
@@ -141,6 +178,8 @@ func (p *parser) parseDeclaration() ast.Declaration {
 		return p.parseUnsafeDeclaration()
 	case lexer.IF, lexer.FOR, lexer.RETURN, lexer.LOG, lexer.BREAK, lexer.CONTINUE:
 		return p.parseStatement()
+	case lexer.LBRACE:
+		return p.parseBlockStatement()
 	case lexer.IDENT:
 		// Check for different identifier contexts
 		if p.peekTokenIs(lexer.COLON) {
@@ -152,7 +191,7 @@ func (p *parser) parseDeclaration() ast.Declaration {
 		}
 		return p.parseExpressionStatement()
 	default:
-		p.recordError(fmt.Sprintf("unexpected token %s at top level", p.curToken.Type))
+		p.recordSyntaxError(fmt.Sprintf("unexpected token %s at top level", p.curToken.Type))
 		p.synchronize()
 		return nil
 	}
@@ -160,34 +199,48 @@ func (p *parser) parseDeclaration() ast.Declaration {
 
 // parseFunctionDeclaration handles: "func" IDENT "(" [ Params ] ")" [ "->" Type ] Block
 func (p *parser) parseFunctionDeclaration() ast.Declaration {
-	funcDecl := &ast.FuncDecl{}
+	startPos := p.currentPosition()
+	funcDecl := &ast.FuncDecl{
+		Position: startPos,
+	}
 	p.nextToken() // consume "func"
 
 	if !p.curTokenIs(lexer.IDENT) {
-		p.recordError("expected function name")
+		p.recordSyntaxError("expected function name")
 		return nil
 	}
-	funcDecl.Name = &ast.Identifier{Name: p.curToken.Literal}
+	funcDecl.Name = &ast.Identifier{
+		Name:     p.curToken.Literal,
+		Position: p.currentPosition(),
+	}
 	p.nextToken() // consume function name
 
 	if !p.expectCurrent(lexer.LPAREN) {
 		return nil
 	}
 
-	// Parse parameters
+	// Create the signature node right here
+	signature := &ast.FunctionSignature{
+		Position: startPos,
+	}
+
+	// Parse parameters INTO the signature node
 	if !p.curTokenIs(lexer.RPAREN) {
-		funcDecl.Parameters = p.parseParameters()
+		signature.Parameters = p.parseParameters()
 	}
 
 	if !p.expectCurrent(lexer.RPAREN) {
 		return nil
 	}
 
-	// Parse optional return type: [ "->" Type ]
+	// Parse optional return type INTO the signature node
 	if p.curTokenIs(lexer.ARROW) {
 		p.nextToken() // consume "->"
-		funcDecl.ReturnType = p.parseType()
+		signature.ReturnType = p.parseType()
 	}
+
+	// Attach the completed signature to the function declaration
+	funcDecl.Signature = signature
 
 	// Parse function body
 	funcDecl.Body = p.parseBlockStatement()
@@ -223,12 +276,16 @@ func (p *parser) parseParameters() []*ast.Parameter {
 
 func (p *parser) parseParameter() *ast.Parameter {
 	if !p.curTokenIs(lexer.IDENT) {
-		p.recordError("expected parameter name")
+		p.recordSyntaxError("expected parameter name")
 		return nil
 	}
 
 	param := &ast.Parameter{
-		Name: &ast.Identifier{Name: p.curToken.Literal},
+		Name: &ast.Identifier{
+			Name:     p.curToken.Literal,
+			Position: p.currentPosition(),
+		},
+		Position: p.currentPosition(),
 	}
 	p.nextToken() // consume parameter name
 
@@ -242,7 +299,10 @@ func (p *parser) parseParameter() *ast.Parameter {
 
 // parseVariableDeclaration handles both explicit and inferred declarations
 func (p *parser) parseVariableDeclaration() ast.Declaration {
-	varDecl := &ast.VarDecl{}
+	startPos := p.currentPosition()
+	varDecl := &ast.VarDecl{
+		Position: startPos,
+	}
 
 	// Check for "mut" keyword
 	if p.curTokenIs(lexer.MUT) {
@@ -251,10 +311,13 @@ func (p *parser) parseVariableDeclaration() ast.Declaration {
 	}
 
 	if !p.curTokenIs(lexer.IDENT) {
-		p.recordError("expected variable name")
+		p.recordSyntaxError("expected variable name")
 		return nil
 	}
-	varDecl.Name = &ast.Identifier{Name: p.curToken.Literal}
+	varDecl.Name = &ast.Identifier{
+		Name:     p.curToken.Literal,
+		Position: p.currentPosition(),
+	}
 	p.nextToken() // consume variable name
 
 	if p.curTokenIs(lexer.COLON) {
@@ -271,7 +334,7 @@ func (p *parser) parseVariableDeclaration() ast.Declaration {
 		p.nextToken() // consume ":="
 		varDecl.Value = p.parseExpression()
 	} else {
-		p.recordError("expected ':' or ':=' in variable declaration")
+		p.recordSyntaxError("expected ':' or ':=' in variable declaration")
 		return nil
 	}
 
@@ -285,14 +348,20 @@ func (p *parser) parseVariableDeclaration() ast.Declaration {
 
 // parseStructDeclaration handles: "struct" IDENT "{" { FieldDecl } "}"
 func (p *parser) parseStructDeclaration() ast.Declaration {
-	structDecl := &ast.StructDecl{}
+	startPos := p.currentPosition()
+	structDecl := &ast.StructDecl{
+		Position: startPos,
+	}
 	p.nextToken() // consume "struct"
 
 	if !p.curTokenIs(lexer.IDENT) {
-		p.recordError("expected struct name")
+		p.recordSyntaxError("expected struct name")
 		return nil
 	}
-	structDecl.Name = &ast.Identifier{Name: p.curToken.Literal}
+	structDecl.Name = &ast.Identifier{
+		Name:     p.curToken.Literal,
+		Position: p.currentPosition(),
+	}
 	p.nextToken() // consume struct name
 
 	if !p.expectCurrent(lexer.LBRACE) {
@@ -304,6 +373,16 @@ func (p *parser) parseStructDeclaration() ast.Declaration {
 		field := p.parseFieldDeclaration()
 		if field != nil {
 			structDecl.Fields = append(structDecl.Fields, field)
+		} else {
+			// If field parsing failed, try to recover by skipping to next field or end
+			if !p.curTokenIs(lexer.RBRACE) && !p.isAtEnd() {
+				p.synchronize()
+				// If we're still not at the end or closing brace, skip this field and continue
+				if !p.curTokenIs(lexer.RBRACE) && !p.isAtEnd() {
+					continue
+				}
+			}
+			break
 		}
 	}
 
@@ -316,12 +395,16 @@ func (p *parser) parseStructDeclaration() ast.Declaration {
 
 func (p *parser) parseFieldDeclaration() *ast.FieldDecl {
 	if !p.curTokenIs(lexer.IDENT) {
-		p.recordError("expected field name")
+		p.recordSyntaxError("expected field name")
 		return nil
 	}
 
 	field := &ast.FieldDecl{
-		Name: &ast.Identifier{Name: p.curToken.Literal},
+		Name: &ast.Identifier{
+			Name:     p.curToken.Literal,
+			Position: p.currentPosition(),
+		},
+		Position: p.currentPosition(),
 	}
 	p.nextToken() // consume field name
 
@@ -341,20 +424,28 @@ func (p *parser) parseFieldDeclaration() *ast.FieldDecl {
 
 // parseUnsafeDeclaration handles: "unsafe" Block
 func (p *parser) parseUnsafeDeclaration() ast.Declaration {
+	startPos := p.currentPosition()
 	p.nextToken() // consume "unsafe"
 	block := p.parseBlockStatement()
-	return &ast.UnsafeBlock{Body: block}
+	return &ast.UnsafeBlock{
+		Body:     block,
+		Position: startPos,
+	}
 }
 
 // parseAssignment handles: IDENT "=" Expression ";"
 func (p *parser) parseAssignment() ast.Declaration {
 	if !p.curTokenIs(lexer.IDENT) {
-		p.recordError("expected identifier in assignment")
+		p.recordSyntaxError("expected identifier in assignment")
 		return nil
 	}
 
 	assignment := &ast.AssignmentStatement{
-		Name: &ast.Identifier{Name: p.curToken.Literal},
+		Name: &ast.Identifier{
+			Name:     p.curToken.Literal,
+			Position: p.currentPosition(),
+		},
+		Position: p.currentPosition(),
 	}
 	p.nextToken() // consume identifier
 
@@ -375,13 +466,13 @@ func (p *parser) parseAssignment() ast.Declaration {
 // TODO: Implement these
 // Placeholder implementations
 func (p *parser) parseEnumDeclaration() ast.Declaration {
-	p.recordError("enum declarations not yet implemented")
+	p.recordSyntaxError("enum declarations not yet implemented")
 	p.synchronize()
 	return nil
 }
 
 func (p *parser) parseTypeDeclaration() ast.Declaration {
-	p.recordError("type declarations not yet implemented")
+	p.recordSyntaxError("type declarations not yet implemented")
 	p.synchronize()
 	return nil
 }
@@ -398,9 +489,15 @@ func (p *parser) parseLogicalOr() ast.Expression {
 
 	for p.curTokenIs(lexer.OR) {
 		op := p.curToken.Literal
+		pos := p.currentPosition()
 		p.nextToken()
 		right := p.parseLogicalAnd()
-		expr = &ast.BinaryExpression{Left: expr, Operator: op, Right: right}
+		expr = &ast.BinaryExpression{
+			Left:     expr,
+			Operator: op,
+			Right:    right,
+			Position: pos,
+		}
 	}
 	return expr
 }
@@ -409,9 +506,15 @@ func (p *parser) parseLogicalAnd() ast.Expression {
 	expr := p.parseEquality()
 	for p.curTokenIs(lexer.AND) {
 		op := p.curToken.Literal
+		pos := p.currentPosition()
 		p.nextToken()
 		right := p.parseEquality()
-		expr = &ast.BinaryExpression{Left: expr, Operator: op, Right: right}
+		expr = &ast.BinaryExpression{
+			Left:     expr,
+			Operator: op,
+			Right:    right,
+			Position: pos,
+		}
 	}
 	return expr
 }
@@ -421,9 +524,15 @@ func (p *parser) parseEquality() ast.Expression {
 
 	for p.curTokenIs(lexer.EQEQ) || p.curTokenIs(lexer.BANGEQ) {
 		op := p.curToken.Literal
+		pos := p.currentPosition()
 		p.nextToken()
 		right := p.parseComparison()
-		expr = &ast.BinaryExpression{Left: expr, Operator: op, Right: right}
+		expr = &ast.BinaryExpression{
+			Left:     expr,
+			Operator: op,
+			Right:    right,
+			Position: pos,
+		}
 	}
 	return expr
 }
@@ -433,9 +542,15 @@ func (p *parser) parseComparison() ast.Expression {
 
 	for p.curTokenIs(lexer.LT) || p.curTokenIs(lexer.GT) || p.curTokenIs(lexer.LTEQ) || p.curTokenIs(lexer.GTEQ) {
 		op := p.curToken.Literal
+		pos := p.currentPosition()
 		p.nextToken()
 		right := p.parseTerm()
-		expr = &ast.BinaryExpression{Left: expr, Operator: op, Right: right}
+		expr = &ast.BinaryExpression{
+			Left:     expr,
+			Operator: op,
+			Right:    right,
+			Position: pos,
+		}
 	}
 	return expr
 }
@@ -445,9 +560,15 @@ func (p *parser) parseTerm() ast.Expression {
 
 	for p.curTokenIs(lexer.PLUS) || p.curTokenIs(lexer.MINUS) {
 		op := p.curToken.Literal
+		pos := p.currentPosition()
 		p.nextToken()
 		right := p.parseFactor()
-		expr = &ast.BinaryExpression{Left: expr, Operator: op, Right: right}
+		expr = &ast.BinaryExpression{
+			Left:     expr,
+			Operator: op,
+			Right:    right,
+			Position: pos,
+		}
 	}
 	return expr
 }
@@ -457,9 +578,15 @@ func (p *parser) parseFactor() ast.Expression {
 
 	for p.curTokenIs(lexer.ASTERISK) || p.curTokenIs(lexer.SLASH) || p.curTokenIs(lexer.PERCENT) {
 		op := p.curToken.Literal
+		pos := p.currentPosition()
 		p.nextToken()
 		right := p.parseUnary()
-		expr = &ast.BinaryExpression{Left: expr, Operator: op, Right: right}
+		expr = &ast.BinaryExpression{
+			Left:     expr,
+			Operator: op,
+			Right:    right,
+			Position: pos,
+		}
 	}
 	return expr
 }
@@ -467,9 +594,14 @@ func (p *parser) parseFactor() ast.Expression {
 func (p *parser) parseUnary() ast.Expression {
 	if p.curTokenIs(lexer.BANG) || p.curTokenIs(lexer.MINUS) {
 		op := p.curToken.Literal
+		pos := p.currentPosition()
 		p.nextToken()
 		right := p.parseUnary()
-		return &ast.UnaryExpression{Operator: op, Right: right}
+		return &ast.UnaryExpression{
+			Operator: op,
+			Right:    right,
+			Position: pos,
+		}
 	}
 	return p.parsePrimary()
 }
@@ -499,7 +631,7 @@ func (p *parser) parsePrimary() ast.Expression {
 		expr = p.parseArrayLiteral()
 	default:
 		p.synchronize()
-		p.recordError(fmt.Sprintf("unexpected token %s in expression", p.curToken.Type))
+		p.recordSyntaxError(fmt.Sprintf("unexpected token %s in expression", p.curToken.Type))
 		return nil
 	}
 
@@ -521,6 +653,7 @@ func (p *parser) parsePrimary() ast.Expression {
 // parseIdentifierOrStructLiteral handles both identifiers and struct literals
 func (p *parser) parseIdentifierOrStructLiteral() ast.Expression {
 	name := p.curToken.Literal
+	pos := p.currentPosition()
 	p.nextToken() // consume identifier
 
 	// Check if this is a struct literal: Point{x: 1, y: 2}
@@ -528,13 +661,21 @@ func (p *parser) parseIdentifierOrStructLiteral() ast.Expression {
 		return p.parseStructLiteral(name)
 	}
 
-	return &ast.Identifier{Name: name}
+	return &ast.Identifier{
+		Name:     name,
+		Position: pos,
+	}
 }
 
 // parseStructLiteral handles: IDENT "{" [ FieldInit ( "," FieldInit )* ] "}"
 func (p *parser) parseStructLiteral(typeName string) ast.Expression {
+	startPos := p.previousPosition() // Position of the type name
 	structLit := &ast.StructLiteral{
-		Type: &ast.Identifier{Name: typeName},
+		Type: &ast.Identifier{
+			Name:     typeName,
+			Position: startPos,
+		},
+		Position: startPos,
 	}
 	p.nextToken() // consume "{"
 
@@ -566,12 +707,16 @@ func (p *parser) parseStructLiteral(typeName string) ast.Expression {
 
 func (p *parser) parseFieldInit() *ast.FieldInit {
 	if !p.curTokenIs(lexer.IDENT) {
-		p.recordError("expected field name")
+		p.recordSyntaxError("expected field name")
 		return nil
 	}
 
 	field := &ast.FieldInit{
-		Name: &ast.Identifier{Name: p.curToken.Literal},
+		Name: &ast.Identifier{
+			Name:     p.curToken.Literal,
+			Position: p.currentPosition(),
+		},
+		Position: p.currentPosition(),
 	}
 	p.nextToken() // consume field name
 
@@ -585,6 +730,7 @@ func (p *parser) parseFieldInit() *ast.FieldInit {
 
 // parseIndexOrSliceExpression handles both indexing and slicing
 func (p *parser) parseIndexOrSliceExpression(object ast.Expression) ast.Expression {
+	startPos := p.currentPosition()
 	p.nextToken() // consume "["
 
 	startExpr := p.parseExpression()
@@ -604,9 +750,10 @@ func (p *parser) parseIndexOrSliceExpression(object ast.Expression) ast.Expressi
 
 		// Create SliceExpression
 		return &ast.SliceExpression{
-			Object: object,
-			Start:  startExpr,
-			End:    endExpr,
+			Object:   object,
+			Start:    startExpr,
+			End:      endExpr,
+			Position: startPos,
 		}
 	}
 
@@ -616,28 +763,45 @@ func (p *parser) parseIndexOrSliceExpression(object ast.Expression) ast.Expressi
 	}
 
 	return &ast.IndexExpression{
-		Object: object,
-		Index:  startExpr,
+		Object:   object,
+		Index:    startExpr,
+		Position: startPos,
 	}
 }
 
 // Keep your existing literal parsing methods
 func (p *parser) parseIdentifier() ast.Expression {
-	ident := &ast.Identifier{Name: p.curToken.Literal}
+	ident := &ast.Identifier{
+		Name:     p.curToken.Literal,
+		Position: p.currentPosition(),
+	}
 	p.nextToken()
 	return ident
 }
 
 func (p *parser) parseNumberLiteral() ast.Expression {
+	// First try to parse as an integer
+	if intVal, err := strconv.ParseInt(p.curToken.Literal, 10, 64); err == nil {
+		lit := &ast.Literal{
+			Token:    p.curToken.Literal,
+			Value:    int(intVal), // Convert to int to match the type checker's expectations
+			Position: p.currentPosition(),
+		}
+		p.nextToken()
+		return lit
+	}
+
+	// If integer parsing fails, try as float
 	val, err := strconv.ParseFloat(p.curToken.Literal, 64)
 	if err != nil {
-		p.recordError("failed to parse number: " + err.Error())
+		p.recordSyntaxError("failed to parse number: " + err.Error())
 		p.synchronize()
 		return nil
 	}
 	lit := &ast.Literal{
-		Token: p.curToken.Literal,
-		Value: val,
+		Token:    p.curToken.Literal,
+		Value:    val,
+		Position: p.currentPosition(),
 	}
 	p.nextToken()
 	return lit
@@ -645,8 +809,9 @@ func (p *parser) parseNumberLiteral() ast.Expression {
 
 func (p *parser) parseStringLiteral() ast.Expression {
 	lit := &ast.Literal{
-		Token: p.curToken.Literal,
-		Value: p.curToken.Literal,
+		Token:    p.curToken.Literal,
+		Value:    p.curToken.Literal,
+		Position: p.currentPosition(),
 	}
 	p.nextToken()
 	return lit
@@ -654,8 +819,9 @@ func (p *parser) parseStringLiteral() ast.Expression {
 
 func (p *parser) parseBooleanLiteral() ast.Expression {
 	lit := &ast.Literal{
-		Token: p.curToken.Literal,
-		Value: p.curToken.Type == lexer.TRUE,
+		Token:    p.curToken.Literal,
+		Value:    p.curToken.Type == lexer.TRUE,
+		Position: p.currentPosition(),
 	}
 	p.nextToken()
 	return lit
@@ -663,15 +829,19 @@ func (p *parser) parseBooleanLiteral() ast.Expression {
 
 func (p *parser) parseNilLiteral() ast.Expression {
 	lit := &ast.Literal{
-		Token: p.curToken.Literal,
-		Value: nil,
+		Token:    p.curToken.Literal,
+		Value:    nil,
+		Position: p.currentPosition(),
 	}
 	p.nextToken()
 	return lit
 }
 
 func (p *parser) parseArrayLiteral() ast.Expression {
-	array := &ast.ArrayLiteral{}
+	startPos := p.currentPosition()
+	array := &ast.ArrayLiteral{
+		Position: startPos,
+	}
 	p.nextToken() // consume [
 
 	if p.curTokenIs(lexer.RBRACKET) {
@@ -693,7 +863,11 @@ func (p *parser) parseArrayLiteral() ast.Expression {
 }
 
 func (p *parser) parseCallExpression(function ast.Expression) ast.Expression {
-	call := &ast.FunctionCall{Function: function}
+	startPos := p.currentPosition()
+	call := &ast.FunctionCall{
+		Function: function,
+		Position: startPos,
+	}
 	p.nextToken() // consume (
 
 	if p.curTokenIs(lexer.RPAREN) {
@@ -716,7 +890,11 @@ func (p *parser) parseCallExpression(function ast.Expression) ast.Expression {
 }
 
 func (p *parser) parseIndexExpression(array ast.Expression) ast.Expression {
-	index := &ast.IndexExpression{Object: array}
+	startPos := p.currentPosition()
+	index := &ast.IndexExpression{
+		Object:   array,
+		Position: startPos,
+	}
 	p.nextToken() // consume [
 
 	index.Index = p.parseExpression()
@@ -729,25 +907,35 @@ func (p *parser) parseIndexExpression(array ast.Expression) ast.Expression {
 }
 
 func (p *parser) parseMemberExpression(object ast.Expression) ast.Expression {
+	startPos := p.currentPosition()
 	p.nextToken() // consume .
 
 	if !p.curTokenIs(lexer.IDENT) {
-		p.recordError("expected identifier after '.'")
+		p.recordSyntaxError("expected identifier after '.'")
 		return nil
 	}
 
 	// Safe parsing without dangerous type assertion
-	property := &ast.Identifier{Name: p.curToken.Literal}
+	property := &ast.Identifier{
+		Name:     p.curToken.Literal,
+		Position: p.currentPosition(),
+	}
 	p.nextToken() // consume identifier
 
 	return &ast.MemberExpression{
 		Object:   object,
 		Property: property,
+		Position: startPos,
 	}
 }
 
 // ===== STATEMENT PARSING =====
 func (p *parser) parseStatement() ast.Statement {
+	// Guard: if we're at the end of a block or file, do not parse a statement
+	if p.curTokenIs(lexer.RBRACE) || p.curTokenIs(lexer.EOF) {
+		return nil
+	}
+
 	switch p.curToken.Type {
 	case lexer.IF:
 		return p.parseIfStatement()
@@ -767,16 +955,27 @@ func (p *parser) parseStatement() ast.Statement {
 }
 
 func (p *parser) parseBlockStatement() *ast.BlockStatement {
-	block := &ast.BlockStatement{}
+	startPos := p.currentPosition()
+	block := &ast.BlockStatement{
+		Position: startPos,
+	}
 
 	if !p.expectCurrent(lexer.LBRACE) {
 		return nil
 	}
 
 	for !p.curTokenIs(lexer.RBRACE) && !p.isAtEnd() {
+		// Guard: if we're at RBRACE or EOF, break
+		if p.curTokenIs(lexer.RBRACE) || p.curTokenIs(lexer.EOF) {
+			break
+		}
 		stmt := p.parseStatement()
 		if stmt != nil {
 			block.Statements = append(block.Statements, stmt)
+		}
+		// Ensure we advance past the statement if we're not at the end
+		if !p.curTokenIs(lexer.RBRACE) && !p.curTokenIs(lexer.EOF) {
+			p.nextToken()
 		}
 	}
 
@@ -788,10 +987,19 @@ func (p *parser) parseBlockStatement() *ast.BlockStatement {
 }
 
 func (p *parser) parseIfStatement() ast.Statement {
-	stmt := &ast.IfStatement{}
+	startPos := p.currentPosition()
+	stmt := &ast.IfStatement{
+		Position: startPos,
+	}
 	p.nextToken() // consume 'if'
 
 	stmt.Condition = p.parseExpression()
+
+	// Ensure we're on LBRACE before parsing the block
+	if !p.curTokenIs(lexer.LBRACE) {
+		p.recordSyntaxError("expected '{' after if condition")
+		return nil
+	}
 	stmt.Consequence = p.parseBlockStatement()
 
 	// Handle optional else clause
@@ -802,6 +1010,7 @@ func (p *parser) parseIfStatement() ast.Statement {
 			elseIf := p.parseIfStatement()
 			stmt.Alternative = &ast.BlockStatement{
 				Statements: []ast.Statement{elseIf},
+				Position:   p.currentPosition(),
 			}
 		} else {
 			// else block
@@ -813,41 +1022,64 @@ func (p *parser) parseIfStatement() ast.Statement {
 }
 
 func (p *parser) parseForStatement() ast.Statement {
-	stmt := &ast.ForStatement{}
+	startPos := p.currentPosition()
+	stmt := &ast.ForStatement{
+		Position: startPos,
+	}
 	p.nextToken() // consume 'for'
 
-	// Parse optional init; condition; post parts
-	if !p.curTokenIs(lexer.LBRACE) {
-		// Parse init (optional)
+	// Parse init (optional)
+	if p.curTokenIs(lexer.SEMICOLON) {
+		p.nextToken() // consume first semicolon
+	} else if p.curTokenIs(lexer.LBRACE) {
+		// No init, no condition, no post
+	} else {
+		stmt.Init = p.parseStatement()
 		if !p.curTokenIs(lexer.SEMICOLON) {
-			stmt.Init = p.parseStatement()
+			p.recordSyntaxError("expected ';' after for loop init")
+			return nil
 		}
-
-		if p.curTokenIs(lexer.SEMICOLON) {
-			p.nextToken() // consume ;
-
-			// Parse condition (optional)
-			if !p.curTokenIs(lexer.SEMICOLON) {
-				stmt.Condition = p.parseExpression()
-			}
-
-			if p.curTokenIs(lexer.SEMICOLON) {
-				p.nextToken() // consume ;
-
-				// Parse post (optional)
-				if !p.curTokenIs(lexer.LBRACE) {
-					stmt.Post = p.parseStatement()
-				}
-			}
-		}
+		p.nextToken() // consume first semicolon
 	}
 
+	// Parse condition (optional)
+	if p.curTokenIs(lexer.SEMICOLON) {
+		p.nextToken() // consume second semicolon
+	} else if p.curTokenIs(lexer.LBRACE) {
+		// No condition, no post
+	} else {
+		stmt.Condition = p.parseExpression()
+		if !p.curTokenIs(lexer.SEMICOLON) {
+			p.recordSyntaxError("expected ';' after for loop condition")
+			return nil
+		}
+		p.nextToken() // consume second semicolon
+	}
+
+	// Parse post (optional)
+	if p.curTokenIs(lexer.LBRACE) {
+		// No post
+	} else if p.curTokenIs(lexer.SEMICOLON) {
+		// Extra semicolon, skip
+		p.nextToken()
+	} else {
+		stmt.Post = p.parseStatement()
+	}
+
+	// Ensure we're on LBRACE before parsing the block
+	if !p.curTokenIs(lexer.LBRACE) {
+		p.recordSyntaxError("expected '{' after for loop header")
+		return nil
+	}
 	stmt.Body = p.parseBlockStatement()
 	return stmt
 }
 
 func (p *parser) parseReturnStatement() ast.Statement {
-	stmt := &ast.ReturnStatement{}
+	startPos := p.currentPosition()
+	stmt := &ast.ReturnStatement{
+		Position: startPos,
+	}
 	p.nextToken() // consume 'return'
 
 	if !p.curTokenIs(lexer.SEMICOLON) && !p.curTokenIs(lexer.RBRACE) {
@@ -862,7 +1094,10 @@ func (p *parser) parseReturnStatement() ast.Statement {
 }
 
 func (p *parser) parsePrintStatement() ast.Statement {
-	stmt := &ast.PrintStatement{}
+	startPos := p.currentPosition()
+	stmt := &ast.PrintStatement{
+		Position: startPos,
+	}
 	p.nextToken() // consume 'log'
 
 	if !p.expectCurrent(lexer.LPAREN) {
@@ -883,24 +1118,32 @@ func (p *parser) parsePrintStatement() ast.Statement {
 }
 
 func (p *parser) parseBreakStatement() ast.Statement {
+	startPos := p.currentPosition()
 	p.nextToken() // consume 'break'
 	if p.curTokenIs(lexer.SEMICOLON) {
 		p.nextToken()
 	}
-	return &ast.BreakStatement{}
+	return &ast.BreakStatement{
+		Position: startPos,
+	}
 }
 
 func (p *parser) parseContinueStatement() ast.Statement {
+	startPos := p.currentPosition()
 	p.nextToken() // consume 'continue'
 	if p.curTokenIs(lexer.SEMICOLON) {
 		p.nextToken()
 	}
-	return &ast.ContinueStatement{}
+	return &ast.ContinueStatement{
+		Position: startPos,
+	}
 }
 
 func (p *parser) parseExpressionStatement() ast.Statement {
+	startPos := p.currentPosition()
 	stmt := &ast.ExpressionStatement{
 		Expression: p.parseExpression(),
+		Position:   startPos,
 	}
 
 	if p.curTokenIs(lexer.SEMICOLON) {
@@ -928,7 +1171,7 @@ func (p *parser) expectPeek(t lexer.TokenType) bool {
 		p.nextToken()
 		return true
 	}
-	p.recordError(fmt.Sprintf("expected next token to be %s, got %s", t.String(), p.peekToken.Type.String()))
+	p.recordSyntaxError(fmt.Sprintf("expected next token to be %s, got %s", t.String(), p.peekToken.Type.String()))
 	p.synchronize()
 	return false
 }
@@ -938,7 +1181,7 @@ func (p *parser) expectCurrent(t lexer.TokenType) bool {
 		p.nextToken()
 		return true
 	}
-	p.recordError(fmt.Sprintf("expected current token to be %s, got %s", t.String(), p.curToken.Type.String()))
+	p.recordSyntaxError(fmt.Sprintf("expected current token to be %s, got %s", t.String(), p.curToken.Type.String()))
 	p.synchronize()
 	return false
 }
