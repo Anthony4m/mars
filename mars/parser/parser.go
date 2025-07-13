@@ -1,4 +1,4 @@
-// parser/parser.go
+// Package parser parser/parser.go
 package parser
 
 import (
@@ -178,6 +178,8 @@ func (p *parser) parseDeclaration() ast.Declaration {
 		return p.parseUnsafeDeclaration()
 	case lexer.IF, lexer.FOR, lexer.RETURN, lexer.LOG, lexer.BREAK, lexer.CONTINUE:
 		return p.parseStatement()
+	case lexer.LBRACE:
+		return p.parseBlockStatement()
 	case lexer.IDENT:
 		// Check for different identifier contexts
 		if p.peekTokenIs(lexer.COLON) {
@@ -371,6 +373,16 @@ func (p *parser) parseStructDeclaration() ast.Declaration {
 		field := p.parseFieldDeclaration()
 		if field != nil {
 			structDecl.Fields = append(structDecl.Fields, field)
+		} else {
+			// If field parsing failed, try to recover by skipping to next field or end
+			if !p.curTokenIs(lexer.RBRACE) && !p.isAtEnd() {
+				p.synchronize()
+				// If we're still not at the end or closing brace, skip this field and continue
+				if !p.curTokenIs(lexer.RBRACE) && !p.isAtEnd() {
+					continue
+				}
+			}
+			break
 		}
 	}
 
@@ -768,6 +780,18 @@ func (p *parser) parseIdentifier() ast.Expression {
 }
 
 func (p *parser) parseNumberLiteral() ast.Expression {
+	// First try to parse as an integer
+	if intVal, err := strconv.ParseInt(p.curToken.Literal, 10, 64); err == nil {
+		lit := &ast.Literal{
+			Token:    p.curToken.Literal,
+			Value:    int(intVal), // Convert to int to match the type checker's expectations
+			Position: p.currentPosition(),
+		}
+		p.nextToken()
+		return lit
+	}
+
+	// If integer parsing fails, try as float
 	val, err := strconv.ParseFloat(p.curToken.Literal, 64)
 	if err != nil {
 		p.recordSyntaxError("failed to parse number: " + err.Error())
@@ -907,6 +931,11 @@ func (p *parser) parseMemberExpression(object ast.Expression) ast.Expression {
 
 // ===== STATEMENT PARSING =====
 func (p *parser) parseStatement() ast.Statement {
+	// Guard: if we're at the end of a block or file, do not parse a statement
+	if p.curTokenIs(lexer.RBRACE) || p.curTokenIs(lexer.EOF) {
+		return nil
+	}
+
 	switch p.curToken.Type {
 	case lexer.IF:
 		return p.parseIfStatement()
@@ -936,9 +965,17 @@ func (p *parser) parseBlockStatement() *ast.BlockStatement {
 	}
 
 	for !p.curTokenIs(lexer.RBRACE) && !p.isAtEnd() {
+		// Guard: if we're at RBRACE or EOF, break
+		if p.curTokenIs(lexer.RBRACE) || p.curTokenIs(lexer.EOF) {
+			break
+		}
 		stmt := p.parseStatement()
 		if stmt != nil {
 			block.Statements = append(block.Statements, stmt)
+		}
+		// Ensure we advance past the statement if we're not at the end
+		if !p.curTokenIs(lexer.RBRACE) && !p.curTokenIs(lexer.EOF) {
+			p.nextToken()
 		}
 	}
 
@@ -957,6 +994,12 @@ func (p *parser) parseIfStatement() ast.Statement {
 	p.nextToken() // consume 'if'
 
 	stmt.Condition = p.parseExpression()
+
+	// Ensure we're on LBRACE before parsing the block
+	if !p.curTokenIs(lexer.LBRACE) {
+		p.recordSyntaxError("expected '{' after if condition")
+		return nil
+	}
 	stmt.Consequence = p.parseBlockStatement()
 
 	// Handle optional else clause
@@ -985,32 +1028,49 @@ func (p *parser) parseForStatement() ast.Statement {
 	}
 	p.nextToken() // consume 'for'
 
-	// Parse optional init; condition; post parts
-	if !p.curTokenIs(lexer.LBRACE) {
-		// Parse init (optional)
+	// Parse init (optional)
+	if p.curTokenIs(lexer.SEMICOLON) {
+		p.nextToken() // consume first semicolon
+	} else if p.curTokenIs(lexer.LBRACE) {
+		// No init, no condition, no post
+	} else {
+		stmt.Init = p.parseStatement()
 		if !p.curTokenIs(lexer.SEMICOLON) {
-			stmt.Init = p.parseStatement()
+			p.recordSyntaxError("expected ';' after for loop init")
+			return nil
 		}
-
-		if p.curTokenIs(lexer.SEMICOLON) {
-			p.nextToken() // consume ;
-
-			// Parse condition (optional)
-			if !p.curTokenIs(lexer.SEMICOLON) {
-				stmt.Condition = p.parseExpression()
-			}
-
-			if p.curTokenIs(lexer.SEMICOLON) {
-				p.nextToken() // consume ;
-
-				// Parse post (optional)
-				if !p.curTokenIs(lexer.LBRACE) {
-					stmt.Post = p.parseStatement()
-				}
-			}
-		}
+		p.nextToken() // consume first semicolon
 	}
 
+	// Parse condition (optional)
+	if p.curTokenIs(lexer.SEMICOLON) {
+		p.nextToken() // consume second semicolon
+	} else if p.curTokenIs(lexer.LBRACE) {
+		// No condition, no post
+	} else {
+		stmt.Condition = p.parseExpression()
+		if !p.curTokenIs(lexer.SEMICOLON) {
+			p.recordSyntaxError("expected ';' after for loop condition")
+			return nil
+		}
+		p.nextToken() // consume second semicolon
+	}
+
+	// Parse post (optional)
+	if p.curTokenIs(lexer.LBRACE) {
+		// No post
+	} else if p.curTokenIs(lexer.SEMICOLON) {
+		// Extra semicolon, skip
+		p.nextToken()
+	} else {
+		stmt.Post = p.parseStatement()
+	}
+
+	// Ensure we're on LBRACE before parsing the block
+	if !p.curTokenIs(lexer.LBRACE) {
+		p.recordSyntaxError("expected '{' after for loop header")
+		return nil
+	}
 	stmt.Body = p.parseBlockStatement()
 	return stmt
 }

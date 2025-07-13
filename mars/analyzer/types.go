@@ -19,7 +19,7 @@ func NewTypeChecker() *TypeChecker {
 func (tc *TypeChecker) CheckType(expr ast.Expression, expected ast.Type) error {
 	actual := tc.inferType(expr)
 	if !tc.typesCompatible(actual, &expected) {
-		return fmt.Errorf("type mismatch: expected %s, got %s", expected, actual)
+		return fmt.Errorf("type mismatch: expected %v, got %s", expected, actual)
 	}
 	return nil
 }
@@ -105,14 +105,31 @@ func (tc *TypeChecker) inferBinaryExprType(expr *ast.BinaryExpression) *ast.Type
 	leftType := tc.inferType(expr.Left)
 	rightType := tc.inferType(expr.Right)
 
-	// TODO: Implement binary operation type rules
-	// - Arithmetic ops: numeric types
-	// - Comparison ops: boolean result
-	// - Logical ops: boolean operands and result
+	// Handle arithmetic operators
+	switch expr.Operator {
+	case "+", "-", "*", "/", "%":
+		// If either operand is float, result is float
+		if leftType.BaseType == "float" || rightType.BaseType == "float" {
+			return &ast.Type{BaseType: "float"}
+		}
+		// Both operands are integers
+		if leftType.BaseType == "int" && rightType.BaseType == "int" {
+			return &ast.Type{BaseType: "int"}
+		}
+		// If we get here, one or both operands are not numeric
+		return &ast.Type{BaseType: "unknown"}
 
-	// For now, return the left type as a placeholder
-	_ = rightType // Suppress unused variable warning
-	return leftType
+	case "==", "!=", "<", ">", "<=", ">=":
+		// Comparison operators return boolean
+		return &ast.Type{BaseType: "bool"}
+
+	case "&&", "||":
+		// Logical operators return boolean
+		return &ast.Type{BaseType: "bool"}
+
+	default:
+		return &ast.Type{BaseType: "unknown"}
+	}
 }
 
 // inferCallExprType determines the type of a function call

@@ -110,13 +110,13 @@ func TestVariableDeclarations(t *testing.T) {
 func TestIntegerLiteralExpression(t *testing.T) {
 	tests := []struct {
 		input    string
-		expected float64
+		expected int
 	}{
-		{"x := 5;", 5.0},            // type inference
-		{"x : int = 5;", 5.0},       // explicit type
-		{"mut y := 42;", 42.0},      // mutable with inference
-		{"mut y : int = 42;", 42.0}, // mutable with explicit type
-		{"return 100;", 100.0},      // in return statement
+		{"x := 5;", 5},            // type inference
+		{"x : int = 5;", 5},       // explicit type
+		{"mut y := 42;", 42},      // mutable with inference
+		{"mut y : int = 42;", 42}, // mutable with explicit type
+		{"return 100;", 100},      // in return statement
 	}
 
 	for _, tt := range tests {
@@ -145,11 +145,11 @@ func TestIntegerLiteralExpression(t *testing.T) {
 			t.Fatalf("expr not *ast.Literal. got=%T", expr)
 		}
 		if literal.Value != tt.expected {
-			t.Errorf("literal.Value not %f. got=%f", tt.expected, literal.Value)
+			t.Errorf("literal.Value not %d. got=%d", tt.expected, literal.Value)
 		}
-		if literal.TokenLiteral() != fmt.Sprintf("%d", int(tt.expected)) {
+		if literal.TokenLiteral() != fmt.Sprintf("%d", tt.expected) {
 			t.Errorf("literal.TokenLiteral not %s. got=%s",
-				fmt.Sprintf("%d", int(tt.expected)), literal.TokenLiteral())
+				fmt.Sprintf("%d", tt.expected), literal.TokenLiteral())
 		}
 	}
 }
@@ -919,7 +919,7 @@ func TestArrayLiteral(t *testing.T) {
 		t.Fatalf("len(array.Elements) not 3. got=%d", len(array.Elements))
 	}
 
-	testIntegerLiteral(t, array.Elements[0], 1)
+	testIntegerLiteralInt(t, array.Elements[0], 1)
 	testInfixExpression(t, array.Elements[1], 2, "*", 2)
 	testInfixExpression(t, array.Elements[2], 3, "+", 3)
 }
@@ -967,7 +967,7 @@ func TestParsingArrayLiterals(t *testing.T) {
 		for i, elem := range tt.expected {
 			switch v := elem.(type) {
 			case int:
-				testIntegerLiteral(t, array.Elements[i], float64(v))
+				testIntegerLiteralInt(t, array.Elements[i], v)
 			case string:
 				testStringLiteral(t, array.Elements[i], v)
 			case bool:
@@ -1344,9 +1344,9 @@ func testInfixExpression(t *testing.T, exp ast.Expression, left interface{},
 func testLiteralExpression(t *testing.T, exp ast.Expression, expected interface{}) bool {
 	switch v := expected.(type) {
 	case int:
-		return testIntegerLiteral(t, exp, float64(v))
+		return testIntegerLiteralInt(t, exp, v)
 	case float64:
-		return testIntegerLiteral(t, exp, v)
+		return testIntegerLiteralFloat(t, exp, v)
 	case string:
 		// Check if it's a string literal (starts with quote) or an identifier
 		if len(v) > 0 && v[0] == '"' {
@@ -1360,15 +1360,42 @@ func testLiteralExpression(t *testing.T, exp ast.Expression, expected interface{
 	return false
 }
 
-func testIntegerLiteral(t *testing.T, il ast.Expression, value float64) bool {
+func testIntegerLiteralInt(t *testing.T, il ast.Expression, value int) bool {
 	integ, ok := il.(*ast.Literal)
 	if !ok {
 		t.Errorf("il not *ast.Literal. got=%T", il)
 		return false
 	}
 
-	if integ.Value != value {
-		t.Errorf("integ.Value not %f. got=%f", value, integ.Value)
+	intVal, ok := integ.Value.(int)
+	if !ok {
+		t.Errorf("integ.Value not int. got=%T", integ.Value)
+		return false
+	}
+
+	if intVal != value {
+		t.Errorf("integ.Value not %d. got=%d", value, intVal)
+		return false
+	}
+
+	return true
+}
+
+func testIntegerLiteralFloat(t *testing.T, il ast.Expression, value float64) bool {
+	integ, ok := il.(*ast.Literal)
+	if !ok {
+		t.Errorf("il not *ast.Literal. got=%T", il)
+		return false
+	}
+
+	floatVal, ok := integ.Value.(float64)
+	if !ok {
+		t.Errorf("integ.Value not float64. got=%T", integ.Value)
+		return false
+	}
+
+	if floatVal != value {
+		t.Errorf("integ.Value not %f. got=%f", value, floatVal)
 		return false
 	}
 
