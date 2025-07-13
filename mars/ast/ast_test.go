@@ -15,17 +15,19 @@ func TestProgramString(t *testing.T) {
 			},
 			&FuncDecl{
 				Name: &Identifier{Name: "add"},
-				Parameters: []*Parameter{
-					{
-						Name: &Identifier{Name: "a"},
-						Type: &Type{BaseType: "int"},
+				Signature: &FunctionSignature{
+					Parameters: []*Parameter{
+						{
+							Name: &Identifier{Name: "a"},
+							Type: &Type{BaseType: "int"},
+						},
+						{
+							Name: &Identifier{Name: "b"},
+							Type: &Type{BaseType: "int"},
+						},
 					},
-					{
-						Name: &Identifier{Name: "b"},
-						Type: &Type{BaseType: "int"},
-					},
+					ReturnType: &Type{BaseType: "int"},
 				},
-				ReturnType: &Type{BaseType: "int"},
 				Body: &BlockStatement{
 					Statements: []Statement{
 						&ReturnStatement{
@@ -90,17 +92,19 @@ func TestAssignmentStatement(t *testing.T) {
 func TestFuncDeclString(t *testing.T) {
 	decl := &FuncDecl{
 		Name: &Identifier{Name: "add"},
-		Parameters: []*Parameter{
-			{
-				Name: &Identifier{Name: "a"},
-				Type: &Type{BaseType: "int"},
+		Signature: &FunctionSignature{
+			Parameters: []*Parameter{
+				{
+					Name: &Identifier{Name: "a"},
+					Type: &Type{BaseType: "int"},
+				},
+				{
+					Name: &Identifier{Name: "b"},
+					Type: &Type{BaseType: "int"},
+				},
 			},
-			{
-				Name: &Identifier{Name: "b"},
-				Type: &Type{BaseType: "int"},
-			},
+			ReturnType: &Type{BaseType: "int"},
 		},
-		ReturnType: &Type{BaseType: "int"},
 		Body: &BlockStatement{
 			Statements: []Statement{
 				&ReturnStatement{
@@ -224,16 +228,16 @@ func TestTypeString(t *testing.T) {
 		{
 			name: "struct type",
 			typ: &Type{
-				StructType: &Identifier{Name: "Point"},
+				StructName: "Point",
 			},
-			expected: "Point",
+			expected: "struct Point",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.typ.TokenLiteral(); got != tt.expected {
-				t.Errorf("Type.TokenLiteral() = %v, want %v", got, tt.expected)
+			if got := tt.typ.String(); got != tt.expected {
+				t.Errorf("Type.String() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
