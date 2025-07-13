@@ -4,7 +4,16 @@ import (
 	"fmt"
 	"mars/ast"
 	"mars/errors"
+	"os"
 )
+
+func debugLog(msg string) {
+	f, err := os.OpenFile("analyzer_debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err == nil {
+		defer f.Close()
+		f.WriteString(msg + "\n")
+	}
+}
 
 // Analyzer performs semantic analysis on the AST
 type Analyzer struct {
@@ -92,6 +101,42 @@ func (a *Analyzer) collectDeclarations(node ast.Node) error {
 	case *ast.UnsafeBlock:
 		//collect unsafe blocks
 		return a.collectUnsafeBlock(n)
+	case *ast.BlockStatement:
+		// Only collect declarations from all statements, do not enter/exit scope in first pass
+		for _, stmt := range n.Statements {
+			if err := a.collectDeclarations(stmt); err != nil {
+				return err
+			}
+		}
+	case *ast.IfStatement:
+		// Collect declarations from if statement blocks
+		if n.Consequence != nil {
+			if err := a.collectDeclarations(n.Consequence); err != nil {
+				return err
+			}
+		}
+		if n.Alternative != nil {
+			if err := a.collectDeclarations(n.Alternative); err != nil {
+				return err
+			}
+		}
+	case *ast.ForStatement:
+		// Collect declarations from for statement blocks
+		if n.Init != nil {
+			if err := a.collectDeclarations(n.Init); err != nil {
+				return err
+			}
+		}
+		if n.Body != nil {
+			if err := a.collectDeclarations(n.Body); err != nil {
+				return err
+			}
+		}
+		if n.Post != nil {
+			if err := a.collectDeclarations(n.Post); err != nil {
+				return err
+			}
+		}
 	default:
 		return nil // ✅ Ignore non-declaration nodes
 	}
@@ -100,6 +145,8 @@ func (a *Analyzer) collectDeclarations(node ast.Node) error {
 }
 
 func (a *Analyzer) CheckVarDecl(decl *ast.VarDecl) error {
+	// DEBUG: Log variable being resolved and current scope pointer
+	debugLog(fmt.Sprintf("[DEBUG] Resolving variable '%s' in scope %p", decl.Name.Name, a.symbols.CurrentScope))
 	// 1) resolve symbol (must have been defined in pass 1)
 	sym, err := a.symbols.Resolve(decl.Name.Name)
 	if err != nil {
@@ -117,10 +164,15 @@ func (a *Analyzer) CheckVarDecl(decl *ast.VarDecl) error {
 	hasAnnot := decl.Type != nil
 	hasInit := decl.Value != nil
 
+	// Check the initializer expression for errors (e.g., struct literal errors)
+	if hasInit {
+		a.CheckTypes(decl.Value)
+	}
+
 	switch {
 	// 1) explicit type + initializer → check compatibility
 	case hasAnnot && hasInit:
-		actual := a.types.inferType(decl.Value)
+		actual := a.inferExpressionType(decl.Value)
 		if !a.types.typesCompatible(&declared, actual) {
 			help := fmt.Sprintf("cast the value to %s or change the variable's type", declared.BaseType)
 			a.errors.AddErrorWithHelp(
@@ -137,12 +189,13 @@ func (a *Analyzer) CheckVarDecl(decl *ast.VarDecl) error {
 
 	// 3) initializer only (x := e) → infer
 	case hasInit:
-		actual := a.types.inferType(decl.Value)
+		actual := a.inferExpressionType(decl.Value)
 		if actual.BaseType == "unknown" {
-			a.errors.AddError(
+			a.errors.AddErrorWithHelp(
 				decl.Name.Position,
 				errors.ErrCodeTypeError,
 				fmt.Sprintf("cannot infer type for variable %q", decl.Name.Name),
+				fmt.Sprintf("variable may not exist, declare %s before using", decl.Name.Name),
 			)
 		}
 
@@ -159,11 +212,22 @@ func (a *Analyzer) CheckVarDecl(decl *ast.VarDecl) error {
 }
 
 func (a *Analyzer) collectVariableDeclaration(decl *ast.VarDecl) error {
+	// DEBUG: Log variable being defined and current scope pointer
+	debugLog(fmt.Sprintf("[DEBUG] Defining variable '%s' in scope %p", decl.Name.Name, a.symbols.CurrentScope))
 	var varType ast.Type
 	if decl.Type != nil {
 		varType = *decl.Type
 	} else if decl.Value != nil {
-		varType = *a.types.inferType(decl.Value)
+		inferredType := a.inferExpressionType(decl.Value)
+		if inferredType != nil {
+			varType = *inferredType
+		} else {
+			// If we can't infer the type, use unknown
+			varType = ast.Type{BaseType: "unknown"}
+		}
+	} else {
+		// No type annotation and no initializer - this should be caught by the parser
+		varType = ast.Type{BaseType: "unknown"}
 	}
 
 	if err := a.symbols.Define(decl.Name.Name, varType, decl.Mutable, false, decl); err != nil {
@@ -659,7 +723,7 @@ func (a *Analyzer) CheckAssignment(stmt *ast.AssignmentStatement) error {
 	}
 
 	// 3) type‐check the right‐hand side
-	actual := a.types.inferType(stmt.Value)
+	actual := a.inferExpressionType(stmt.Value)
 	if !a.types.typesCompatible(&sym.Type, actual) {
 		a.errors.AddError(
 			stmt.Name.Position,
@@ -678,8 +742,8 @@ func (a *Analyzer) checkBinaryExpression(expr *ast.BinaryExpression) error {
 		return err
 	}
 
-	leftType := a.types.inferType(expr.Left)
-	rightType := a.types.inferType(expr.Right)
+	leftType := a.inferExpressionType(expr.Left)
+	rightType := a.inferExpressionType(expr.Right)
 	switch expr.Operator {
 	case "+", "-", "*", "/", "%":
 		if !isNumericType(leftType) || !isNumericType(rightType) {
@@ -785,7 +849,7 @@ func (a *Analyzer) checkFunctionCall(call *ast.FunctionCall) error {
 
 	//chack argument types
 	for i, arg := range call.Arguments {
-		argType := a.types.inferType(arg)
+		argType := a.inferExpressionType(arg)
 		paramType := funcSig.Parameters[i].Type
 
 		if !a.types.typesCompatible(paramType, argType) {
@@ -852,7 +916,7 @@ func (a *Analyzer) checkStructLiteral(lit *ast.StructLiteral) error {
 		}
 
 		// 3) Type-check the initializer expression.
-		actual := a.types.inferType(init.Value)
+		actual := a.inferExpressionType(init.Value)
 		if !a.types.typesCompatible(expected, actual) {
 			a.errors.AddErrorWithHelp(
 				init.Value.Pos(),
@@ -870,6 +934,10 @@ func (a *Analyzer) checkStructLiteral(lit *ast.StructLiteral) error {
 }
 
 func (a *Analyzer) inferExpressionType(expr ast.Expression) *ast.Type {
+	if expr == nil {
+		return &ast.Type{BaseType: "unknown"}
+	}
+
 	switch e := expr.(type) {
 	case *ast.Literal:
 		return a.types.inferType(expr)
@@ -904,7 +972,12 @@ func (a *Analyzer) inferExpressionType(expr ast.Expression) *ast.Type {
 			if leftType.BaseType == "float" || rightType.BaseType == "float" {
 				return &ast.Type{BaseType: "float"}
 			}
-			return leftType
+			// Both operands are integers
+			if leftType.BaseType == "int" && rightType.BaseType == "int" {
+				return &ast.Type{BaseType: "int"}
+			}
+			// If we get here, one or both operands are not numeric
+			return &ast.Type{BaseType: "unknown"}
 
 		case "==", "!=", "<", ">", "<=", ">=":
 			// Comparison operators
@@ -938,6 +1011,12 @@ func (a *Analyzer) inferExpressionType(expr ast.Expression) *ast.Type {
 			}
 		}
 		return &ast.Type{BaseType: "unknown"}
+
+	case *ast.StructLiteral:
+		// For struct literals, return the struct type
+		return &ast.Type{
+			StructName: e.Type.Name,
+		}
 
 	default:
 		return &ast.Type{BaseType: "unknown"}
