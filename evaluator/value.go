@@ -11,6 +11,7 @@ const (
 	ERROR_TYPE    = "ERROR"
 	FUNCTION_TYPE = "FUNCTION"
 	RETURN_TYPE   = "RETURN"
+	FLOAT_TYPE    = "FLOAT"
 )
 
 // Value interface - all runtime values implement this
