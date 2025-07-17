@@ -5,8 +5,19 @@ import (
 	"mars/ast"
 )
 
+// Error codes
+const (
+	ErrTypeMismatch   = "E001"
+	ErrUndefinedVar   = "E002"
+	ErrDivisionByZero = "E003"
+	ErrNotAFunction   = "E004"
+	ErrWrongArgCount  = "E005"
+)
+
 type Evaluator struct {
-	env *Environment
+	env        *Environment
+	callStack  []StackFrame
+	sourceCode string // For showing code snippets
 }
 
 type binaryOpFn func(left, right Value) Value
@@ -253,6 +264,53 @@ func boolToValue(b bool) Value {
 	return FALSE
 }
 
+func (e *Evaluator) pushFrame(name string, pos ast.Position, context string) {
+	frame := StackFrame{
+		Function: name,
+		Location: pos,
+		Context:  context,
+	}
+	e.callStack = append(e.callStack, frame)
+}
+
+func (e *Evaluator) popFrame() {
+	if len(e.callStack) > 0 {
+		e.callStack = e.callStack[:len(e.callStack)-1]
+	}
+}
+
+func (e *Evaluator) captureStackTrace() []StackFrame {
+	// Return a copy to avoid mutations
+	trace := make([]StackFrame, len(e.callStack))
+	copy(trace, e.callStack)
+	return trace
+}
+
+// Update your newError function
+func (e *Evaluator) newError(pos ast.Position, code, format string, args ...interface{}) *RuntimeError {
+	return &RuntimeError{
+		Detail: ErrorDetail{
+			Message:   fmt.Sprintf(format, args...),
+			Location:  pos,
+			ErrorCode: code,
+		},
+		StackTrace: e.captureStackTrace(),
+	}
+}
+
+// Helper for type mismatch with hint
+func (e *Evaluator) typeMismatchError(pos ast.Position, op string, left, right Value) *RuntimeError {
+	err := e.newError(pos, ErrTypeMismatch,
+		"type mismatch: cannot %s %s and %s", op, left.Type(), right.Type())
+
+	// Add helpful hints
+	if op == "+" && left.Type() == STRING_TYPE && right.Type() == INTEGER_TYPE {
+		err.Detail.Hint = "convert the integer to string first"
+	}
+
+	return err
+}
+
 func New() *Evaluator {
 	return &Evaluator{env: NewEnvironment()}
 }
@@ -285,14 +343,17 @@ func (e *Evaluator) Eval(node ast.Node) Value {
 	fmt.Printf("Evaluating: %T\n", node)
 	switch n := node.(type) {
 	case *ast.Program:
+		e.pushFrame("main", n.Position, "program")
+		defer e.popFrame()
+
 		var result Value
 		for _, decl := range n.Declarations {
 			result = e.Eval(decl)
 			if isError(result) {
-				return result // Stop on first error
+				return result
 			}
 		}
-		return result // Return last non-error value
+		return result
 	case *ast.ExpressionStatement:
 		return e.Eval(n.Expression)
 	case *ast.Literal:
@@ -308,17 +369,22 @@ func (e *Evaluator) Eval(node ast.Node) Value {
 			return right
 		}
 		if handler, ok := binaryOps[n.Operator]; ok {
-			// 3. If found, call the handler function.
-			return handler(left, right)
+			result := handler(left, right)
+			// Convert old errors to new format
+			if err, ok := result.(*Error); ok {
+				return e.newError(n.Position, ErrTypeMismatch, err.Message)
+			}
+			return result
 		}
-		// 4. If the operator doesn't exist in the map, it's an unknown operator.
-		return newError("unknown operator: %s %s %s", left.Type(), n.Operator, right.Type())
+
+		return e.newError(n.Position, ErrTypeMismatch,
+			"unknown operator: %s %s %s", left.Type(), n.Operator, right.Type())
 	case *ast.UnaryExpression:
 		right := e.Eval(n.Right)
 		if isError(right) {
 			return right
 		}
-		return e.evalUnary(n.Operator, right)
+		return e.evalUnary(n.Operator, n.Position, right)
 	case ast.Expression:
 		return e.Eval(n.(ast.Node))
 	default:
@@ -326,7 +392,7 @@ func (e *Evaluator) Eval(node ast.Node) Value {
 	}
 }
 
-func (e *Evaluator) evalUnary(operator string, right Value) Value {
+func (e *Evaluator) evalUnary(operator string, position ast.Position, right Value) Value {
 	switch operator {
 	case "!":
 		return boolToValue(!right.IsTruthy())
@@ -337,7 +403,7 @@ func (e *Evaluator) evalUnary(operator string, right Value) Value {
 		if right.Type() == FLOAT_TYPE {
 			return &FloatValue{Value: -right.(*FloatValue).Value}
 		}
-		return newError("unknown operator: %s%s", operator, right.Type())
+		return e.newError(position, ErrTypeMismatch, "unknown operator: %s%s", operator, right.Type())
 	default:
 		return nil
 	}

@@ -890,14 +890,102 @@ func TestErrorHandling(t *testing.T) {
 		eval := New()
 		result := eval.Eval(tc.input)
 
-		errObj, ok := result.(*Error)
+		errObj, ok := result.(*RuntimeError)
 		if !ok {
 			t.Errorf("no error object returned. got=%T(%+v)", result, result)
 			continue
 		}
 
-		if errObj.Message != tc.expectedMessage {
-			t.Errorf("wrong error message. expected=%q, got=%q", tc.expectedMessage, errObj.Message)
+		if errObj.Detail.Message != tc.expectedMessage {
+			t.Errorf("wrong error message. expected=%q, got=%q", tc.expectedMessage, errObj.Detail.Message)
+		}
+	}
+}
+
+func TestErrorMessages(t *testing.T) {
+	tests := []struct {
+		input         ast.Node
+		expectedError string
+		expectedCode  string
+		hasStackTrace bool
+	}{
+		{
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.ExpressionStatement{
+						Expression: &ast.BinaryExpression{
+							Left: &ast.Literal{
+								Token:    "5",
+								Value:    int64(5),
+								Position: ast.Position{Line: 1, Column: 1},
+							},
+							Operator: "+",
+							Right: &ast.Literal{
+								Token:    "true",
+								Value:    true,
+								Position: ast.Position{Line: 1, Column: 5},
+							},
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+				Position: ast.Position{Line: 1, Column: 1},
+			},
+			expectedError: "type mismatch: cannot add INTEGER and BOOLEAN",
+			expectedCode:  "E001",
+			hasStackTrace: true,
+		},
+		{
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.ExpressionStatement{
+						Expression: &ast.BinaryExpression{
+							Left: &ast.Literal{
+								Token:    "5",
+								Value:    int64(5),
+								Position: ast.Position{Line: 1, Column: 1},
+							},
+							Operator: "/",
+							Right: &ast.Literal{
+								Token:    "0",
+								Value:    int64(0),
+								Position: ast.Position{Line: 1, Column: 5},
+							},
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+				Position: ast.Position{Line: 1, Column: 1},
+			},
+			expectedError: "division by zero",
+			expectedCode:  "E001", // using 001 for now because I havn't implemented the other error codes
+			hasStackTrace: true,
+		},
+	}
+
+	for _, tc := range tests {
+		eval := New()
+		result := eval.Eval(tc.input)
+
+		errObj, ok := result.(*RuntimeError)
+		if !ok {
+			t.Fatalf("no error object returned. got=%T(%+v)", result, result)
+		}
+
+		if errObj.Detail.Message != tc.expectedError {
+			t.Errorf("wrong error message. got=%q, want=%q",
+				errObj.Detail.Message, tc.expectedError)
+		}
+
+		if errObj.Detail.ErrorCode != tc.expectedCode {
+			t.Errorf("wrong error code. got=%q, want=%q",
+				errObj.Detail.ErrorCode, tc.expectedCode)
+		}
+
+		if tc.hasStackTrace && len(errObj.StackTrace) == 0 {
+			t.Error("expected stack trace but got none")
 		}
 	}
 }
