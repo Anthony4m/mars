@@ -258,24 +258,28 @@ func New() *Evaluator {
 }
 
 /*
-		TODO: 1. **Variable Declaration**
-	  - When you see a `let` or `var` statement, you must bind the new name into the *current* environment.
-	  - 2. **Identifier Lookup**
-	  - Whenever you evaluate an `Identifier` node, you must call `env.Get(name)` to fetch its current value (or signal an undefined-name error).
-	  - 3. **Assignment / Mutation**
-	  - On an assignment expression (`x = expr`), first evaluate the right-hand side, then use `env.Update(name, newValue)` (or `Set` if you allow shadowing) to change the binding in the correct scope.
-	  - 4. **Function Literal (Closure) Creation**
-	  - When you evaluate a function literal, you capture the *current* environment in the closure object so that when the function later runs, it still “sees” those outer variables.
-	  - 5. **Function Call**
-	  - Just before executing a function body, you create a **new enclosed environment** whose `outer` points at the function’s defining (closure) environment.
-	  - You then bind the call’s parameters in that new environment and evaluate the body there.
-	  - 6. **Block / Nested Scope**
-	  - If your language has explicit block scopes (e.g. `{ … }` inside a function), you would push a fresh environment at block entry and pop it at exit so that temporaries don’t leak out.
-	  - 7. **Built-in or Standard Library Calls**
-	  - Even built-ins that modify state (e.g. `push(array, x)`) might need to read or write into the environment, depending on how they’re wired up.
-	  - 8. **Runtime Error Reporting**
-	  - If a variable lookup fails (Get returns not-found), or an update fails, you typically turn that into a runtime error—so your error‐handling paths also inspect the environment.
-	  - Those are the “where” — every time you introduce, lookup, or mutate a name in your AST, you reach for the `Environment`.
+			TODO: 1. **Variable Declaration**
+		  - When you see a `let` or `var` statement, you must bind the new name into the *current* environment.
+		  - 2. **Identifier Lookup**
+		  - Whenever you evaluate an `Identifier` node, you must call `env.Get(name)` to fetch its current value (or signal an undefined-name error).
+		  - 3. **Assignment / Mutation**
+		  - On an assignment expression (`x = expr`), first evaluate the right-hand side, then use `env.Update(name, newValue)` (or `Set` if you allow shadowing) to change the binding in the correct scope.
+		  - 4. **Function Literal (Closure) Creation**
+		  - When you evaluate a function literal, you capture the *current* environment in the closure object so that when the function later runs, it still “sees” those outer variables.
+		  - 5. **Function Call**
+		  - Just before executing a function body, you create a **new enclosed environment** whose `outer` points at the function’s defining (closure) environment.
+		  - You then bind the call’s parameters in that new environment and evaluate the body there.
+		  - 6. **Block / Nested Scope**
+		  - If your language has explicit block scopes (e.g. `{ … }` inside a function), you would push a fresh environment at block entry and pop it at exit so that temporaries don’t leak out.
+		  - 7. **Built-in or Standard Library Calls**
+		  - Even built-ins that modify state (e.g. `push(array, x)`) might need to read or write into the environment, depending on how they’re wired up.
+		  - 8. **Runtime Error Reporting**
+		  - If a variable lookup fails (Get returns not-found), or an update fails, you typically turn that into a runtime error—so your error‐handling paths also inspect the environment.
+		  - Those are the “where” — every time you introduce, lookup, or mutate a name in your AST, you reach for the `Environment`.
+	      - 9. **Enhance Error Handling with Stack Traces**
+		  - Modify the error reporting mechanism to capture and display call stacks for runtime errors, similar to how Rust handles panics or unrecoverable errors.
+		  - 10. **Consider NaN-boxing for Value Representation**
+		  - Investigate and potentially implement NaN-boxing for more efficient value representation in `evaluator/value.go` if performance becomes a critical concern. This is a complex optimization and should be approached carefully.
 */
 func (e *Evaluator) Eval(node ast.Node) Value {
 	fmt.Printf("Evaluating: %T\n", node)
