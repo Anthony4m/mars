@@ -12,6 +12,7 @@ const (
 	ErrDivisionByZero = "E003"
 	ErrNotAFunction   = "E004"
 	ErrWrongArgCount  = "E005"
+	ErrSyntaxError    = "E006"
 )
 
 type Evaluator struct {
@@ -385,6 +386,11 @@ func (e *Evaluator) Eval(node ast.Node) Value {
 			return right
 		}
 		return e.evalUnary(n.Operator, n.Position, right)
+	case *ast.VarDecl:
+		return e.EvalVariableDecl(n)
+	case *ast.AssignmentStatement:
+		return e.EvalAssignment(n)
+
 	case ast.Expression:
 		return e.Eval(n.(ast.Node))
 	default:
@@ -427,6 +433,95 @@ func (e *Evaluator) evalLiteral(lit *ast.Literal) Value {
 		return &FloatValue{Value: v}
 	default:
 		return newError("unknown literal type: %T", lit.Value)
+	}
+}
+
+func (e *Evaluator) EvalVariableDecl(n *ast.VarDecl) Value {
+	//check for identifier if not return error
+	if n.Name == nil {
+		return e.newError(n.Position, ErrSyntaxError, "variable declaration missing name")
+	}
+
+	var value Value
+
+	//case 1 has initializing value
+	if n.Value != nil {
+		value = e.Eval(n.Name)
+		if isError(value) {
+			return value
+		}
+
+		if n.Type != nil {
+			expectedType := n.Type.BaseType
+			actualType := getValueType(value)
+			if !e.TypesCompatible(expectedType, actualType) {
+				return e.newError(n.Position, ErrTypeMismatch, "type mismatch: cannot assign %s to %s",
+					actualType, expectedType)
+			}
+		} else if n.Type != nil {
+			// Case 2: Only type, no value (x: int)
+			// Initialize with zero value
+			value = e.initializeToZero(n.Type)
+		} else {
+			// Case 3: Neither type nor value - error!
+			return e.newError(n.Position, ErrSyntaxError,
+				"variable '%s' needs type or initial value", n.Name.Name)
+		}
+	}
+	// Store in environment
+	e.env.Set(n.Name.Name, value, n.Mutable)
+	// Variable declarations typically return nil/void
+	// or the value for REPL convenience
+	return value
+}
+
+// For Assignment (x = 50)
+func (e *Evaluator) EvalAssignment(n *ast.AssignmentStatement) Value {
+	value := e.Eval(n.Value)
+
+	err := e.env.Update(n.Name.Name, value)
+	if err != nil {
+		return &Error{Message: err.Error()}
+	}
+
+	return value
+}
+
+func (e *Evaluator) initializeToZero(t *ast.Type) Value {
+	v := t.BaseType
+	switch v {
+	case "string":
+		return &StringValue{Value: ""}
+	case "int":
+		return &IntegerValue{Value: 0}
+	case "float":
+		return &FloatValue{Value: 0.00}
+	case "bool":
+		return &BooleanValue{Value: false}
+	default:
+		return NULL
+	}
+}
+
+func (e *Evaluator) TypesCompatible(expectedType string, actualType string) bool {
+	if expectedType != actualType {
+		return false
+	}
+	return true
+}
+
+func getValueType(v Value) string {
+	switch v.Type() {
+	case INTEGER_TYPE:
+		return "int"
+	case FLOAT_TYPE:
+		return "float"
+	case STRING_TYPE:
+		return "string"
+	case BOOLEAN_TYPE:
+		return "bool"
+	default:
+		return v.Type()
 	}
 }
 
