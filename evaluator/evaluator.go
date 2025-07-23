@@ -360,6 +360,34 @@ func (e *Evaluator) Eval(node ast.Node) Value {
 	case *ast.Literal:
 		return e.evalLiteral(n)
 	case *ast.BinaryExpression:
+		if n.Operator == "&&" {
+			left := e.Eval(n.Left)
+			if isError(left) {
+				return left
+			}
+			if !left.IsTruthy() {
+				return FALSE
+			}
+			right := e.Eval(n.Right)
+			if isError(right) {
+				return right
+			}
+			return boolToValue(right.IsTruthy())
+		}
+		if n.Operator == "||" {
+			left := e.Eval(n.Left)
+			if isError(left) {
+				return left
+			}
+			if left.IsTruthy() {
+				return TRUE
+			}
+			right := e.Eval(n.Right)
+			if isError(right) {
+				return right
+			}
+			return boolToValue(right.IsTruthy())
+		}
 		left := e.Eval(n.Left)
 		right := e.Eval(n.Right)
 
@@ -390,7 +418,14 @@ func (e *Evaluator) Eval(node ast.Node) Value {
 		return e.EvalVariableDecl(n)
 	case *ast.AssignmentStatement:
 		return e.EvalAssignment(n)
-
+	case *ast.IfStatement:
+		return e.EvalConditional(n)
+	case *ast.ForStatement:
+		return e.EvalForStatement(n)
+	case *ast.BlockStatement:
+		e.pushFrame("main", n.Position, "block")
+		defer e.popFrame()
+		return e.evalBlock(n)
 	case ast.Expression:
 		return e.Eval(n.(ast.Node))
 	default:
@@ -508,6 +543,85 @@ func (e *Evaluator) TypesCompatible(expectedType string, actualType string) bool
 		return false
 	}
 	return true
+}
+
+func (e *Evaluator) EvalConditional(n *ast.IfStatement) Value {
+	condition := e.Eval(n.Condition)
+	if isError(condition) {
+		return condition
+	}
+
+	if condition.IsTruthy() {
+		return e.Eval(n.Consequence)
+	} else if n.Alternative != nil {
+		return e.Eval(n.Alternative)
+	}
+
+	return NULL
+}
+
+func (e *Evaluator) EvalForStatement(n *ast.ForStatement) Value {
+	e.pushFrame("for-loop", n.Position, "for statement")
+	defer e.popFrame()
+
+	// Create new scope for loop variable
+	e.env = NewEnclosedEnvironment(e.env)
+	defer func() { e.env = e.env.outer }()
+
+	// Initialize (if present)
+	if n.Init != nil {
+		init := e.Eval(n.Init)
+		if isError(init) {
+			return init
+		}
+	}
+
+	var result Value = NULL
+
+	for {
+		// Check condition (if present)
+		if n.Condition != nil {
+			condition := e.Eval(n.Condition)
+			if isError(condition) {
+				return condition
+			}
+			if !condition.IsTruthy() {
+				break
+			}
+		}
+
+		// Evaluate body
+		result = e.Eval(n.Body)
+		if isError(result) {
+			return result
+		}
+
+		// Post statement (if present)
+		if n.Post != nil {
+			post := e.Eval(n.Post)
+			if isError(post) {
+				return post
+			}
+		}
+	}
+
+	return result
+}
+
+func (e *Evaluator) evalBlock(n *ast.BlockStatement) Value {
+	//create new scopes for this block
+	e.env = NewEnclosedEnvironment(e.env)
+	defer func() { e.env = e.env.outer }()
+
+	var result Value = NULL
+
+	for _, stmt := range n.Statements {
+		result = e.Eval(stmt)
+		if isError(result) {
+			return result
+		}
+	}
+	return result
 }
 
 func getValueType(v Value) string {
