@@ -12,6 +12,8 @@ const (
 	FUNCTION_TYPE = "FUNCTION"
 	RETURN_TYPE   = "RETURN"
 	FLOAT_TYPE    = "FLOAT"
+	BREAK_TYPE    = "BREAK"
+	CONTINUE_TYPE = "CONTINUE"
 )
 
 // Value interface - all runtime values implement this

@@ -564,48 +564,60 @@ func (e *Evaluator) EvalForStatement(n *ast.ForStatement) Value {
 	e.pushFrame("for-loop", n.Position, "for statement")
 	defer e.popFrame()
 
-	// Create new scope for loop variable
+	// New scope for init/post variables
 	e.env = NewEnclosedEnvironment(e.env)
 	defer func() { e.env = e.env.outer }()
 
-	// Initialize (if present)
+	// Init (if any)
 	if n.Init != nil {
-		init := e.Eval(n.Init)
-		if isError(init) {
-			return init
+		if v := e.Eval(n.Init); isError(v) {
+			return v
 		}
 	}
 
-	var result Value = NULL
-
+	// Main loop
 	for {
-		// Check condition (if present)
+		// Condition (if any)
 		if n.Condition != nil {
-			condition := e.Eval(n.Condition)
-			if isError(condition) {
-				return condition
+			cond := e.Eval(n.Condition)
+			if isError(cond) {
+				return cond
 			}
-			if !condition.IsTruthy() {
+			if !cond.IsTruthy() {
 				break
 			}
 		}
 
-		// Evaluate body
-		result = e.Eval(n.Body)
-		if isError(result) {
-			return result
+		// Body
+		bodyVal := e.Eval(n.Body)
+		if isError(bodyVal) {
+			return bodyVal
 		}
 
-		// Post statement (if present)
+		switch bodyVal.Type() {
+		case RETURN_TYPE:
+			return bodyVal // propagate return
+		case BREAK_TYPE:
+			return NULL // exit loop
+		case CONTINUE_TYPE:
+			// Execute post, then continue
+			if n.Post != nil {
+				if v := e.Eval(n.Post); isError(v) {
+					return v
+				}
+			}
+			continue
+		}
+
+		// Post-statement (normal flow)
 		if n.Post != nil {
-			post := e.Eval(n.Post)
-			if isError(post) {
-				return post
+			if v := e.Eval(n.Post); isError(v) {
+				return v
 			}
 		}
 	}
 
-	return result
+	return NULL
 }
 
 func (e *Evaluator) evalBlock(n *ast.BlockStatement) Value {
@@ -619,6 +631,15 @@ func (e *Evaluator) evalBlock(n *ast.BlockStatement) Value {
 		result = e.Eval(stmt)
 		if isError(result) {
 			return result
+		}
+		// After evaluating a statement, check if it was a "flow-breaking" one.
+		if result != nil {
+			rt := result.Type()
+			// If we get a ReturnValue or BreakValue, stop executing this block
+			// and pass the signal up the call stack immediately.
+			if rt == RETURN_TYPE || rt == BREAK_TYPE || rt == CONTINUE_TYPE || rt == ERROR_TYPE {
+				return result
+			}
 		}
 	}
 	return result
