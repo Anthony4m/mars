@@ -38,6 +38,9 @@ func (e *Environment) Get(name string) (Binding, bool) {
 	//check outer scope
 	if e.outer != nil {
 		binding, ok = e.outer.Get(name)
+		if ok {
+			return binding, true
+		}
 	}
 
 	return Binding{}, false
@@ -59,7 +62,7 @@ func (e *Environment) Update(name string, val Value) error {
 		}
 		bind := e.Set(name, val, binding.IsMutable)
 		e.store[name] = bind
-
+		return nil
 	}
 
 	// Check outer scopes
