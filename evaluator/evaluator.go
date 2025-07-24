@@ -13,6 +13,9 @@ const (
 	ErrNotAFunction   = "E004"
 	ErrWrongArgCount  = "E005"
 	ErrSyntaxError    = "E006"
+	ErrImmutable      = "E007"
+	ErrUndefined      = "E008"
+	ErrRuntimeError   = "E009"
 )
 
 type Evaluator struct {
@@ -426,6 +429,10 @@ func (e *Evaluator) Eval(node ast.Node) Value {
 		e.pushFrame("main", n.Position, "block")
 		defer e.popFrame()
 		return e.evalBlock(n)
+	case *ast.Identifier:
+		e.pushFrame("main", n.Position, "program")
+		defer e.popFrame()
+		return e.EvalIdentifier(n)
 	case ast.Expression:
 		return e.Eval(n.(ast.Node))
 	default:
@@ -472,20 +479,21 @@ func (e *Evaluator) evalLiteral(lit *ast.Literal) Value {
 }
 
 func (e *Evaluator) EvalVariableDecl(n *ast.VarDecl) Value {
-	//check for identifier if not return error
+	// Check for identifier if not return error
 	if n.Name == nil {
 		return e.newError(n.Position, ErrSyntaxError, "variable declaration missing name")
 	}
 
 	var value Value
 
-	//case 1 has initializing value
+	// Case 1: Has initializing value
 	if n.Value != nil {
-		value = e.Eval(n.Name)
+		value = e.Eval(n.Value)
 		if isError(value) {
 			return value
 		}
 
+		// If type is specified, check compatibility
 		if n.Type != nil {
 			expectedType := n.Type.BaseType
 			actualType := getValueType(value)
@@ -493,18 +501,20 @@ func (e *Evaluator) EvalVariableDecl(n *ast.VarDecl) Value {
 				return e.newError(n.Position, ErrTypeMismatch, "type mismatch: cannot assign %s to %s",
 					actualType, expectedType)
 			}
-		} else if n.Type != nil {
-			// Case 2: Only type, no value (x: int)
-			// Initialize with zero value
-			value = e.initializeToZero(n.Type)
-		} else {
-			// Case 3: Neither type nor value - error!
-			return e.newError(n.Position, ErrSyntaxError,
-				"variable '%s' needs type or initial value", n.Name.Name)
 		}
+	} else if n.Type != nil {
+		// Case 2: Only type, no value (x: int)
+		// Initialize with zero value
+		value = e.initializeToZero(n.Type)
+	} else {
+		// Case 3: Neither type nor value - error!
+		return e.newError(n.Position, ErrSyntaxError,
+			"variable '%s' needs type or initial value", n.Name.Name)
 	}
+
 	// Store in environment
 	e.env.Set(n.Name.Name, value, n.Mutable)
+
 	// Variable declarations typically return nil/void
 	// or the value for REPL convenience
 	return value
@@ -512,11 +522,49 @@ func (e *Evaluator) EvalVariableDecl(n *ast.VarDecl) Value {
 
 // For Assignment (x = 50)
 func (e *Evaluator) EvalAssignment(n *ast.AssignmentStatement) Value {
-	value := e.Eval(n.Value)
+	// Validate AST structure
+	if n.Name == nil {
+		return e.newError(n.Position, ErrSyntaxError, "assignment missing variable name")
+	}
 
+	if n.Value == nil {
+		return e.newError(n.Position, ErrSyntaxError, "assignment missing value")
+	}
+
+	// Evaluate the value to be assigned
+	value := e.Eval(n.Value)
+	if isError(value) {
+		return value
+	}
+
+	// Check if variable exists (optional but good for clarity)
+	bind, exist := e.env.Get(n.Name.Name)
+	if !exist {
+		return e.newError(n.Position, ErrUndefined, "undefined variable '%s'", n.Name.Name)
+	}
+
+	// Check if variable is mutable (if your environment supports this)
+	if !bind.IsMutable {
+		return e.newError(n.Position, ErrImmutable,
+			"cannot assign to immutable variable '%s'", n.Name.Name)
+	}
+
+	if !bind.IsMutable {
+		return e.newError(n.Position, ErrImmutable,
+			"cannot assign to immutable variable '%s'", n.Name.Name)
+	}
+
+	valueType := getValueType(value)
+	varType := getValueType(bind.Value)
+	if valueType != varType {
+		return e.newError(n.Position, ErrTypeMismatch,
+			"type mismatch: cannot assign %s to %s", valueType, varType)
+	}
+
+	// Perform the assignment
 	err := e.env.Update(n.Name.Name, value)
 	if err != nil {
-		return &Error{Message: err.Error()}
+		return e.newError(n.Position, ErrRuntimeError, "assignment failed: %s", err.Error())
 	}
 
 	return value
@@ -525,13 +573,13 @@ func (e *Evaluator) EvalAssignment(n *ast.AssignmentStatement) Value {
 func (e *Evaluator) initializeToZero(t *ast.Type) Value {
 	v := t.BaseType
 	switch v {
-	case "string":
+	case "STRING":
 		return &StringValue{Value: ""}
-	case "int":
+	case "INTEGER":
 		return &IntegerValue{Value: 0}
-	case "float":
+	case "FLOAT":
 		return &FloatValue{Value: 0.00}
-	case "bool":
+	case "BOOLEAN":
 		return &BooleanValue{Value: false}
 	default:
 		return NULL
@@ -546,6 +594,9 @@ func (e *Evaluator) TypesCompatible(expectedType string, actualType string) bool
 }
 
 func (e *Evaluator) EvalConditional(n *ast.IfStatement) Value {
+	if n.Condition == nil {
+		return NULL
+	}
 	condition := e.Eval(n.Condition)
 	if isError(condition) {
 		return condition
@@ -645,16 +696,27 @@ func (e *Evaluator) evalBlock(n *ast.BlockStatement) Value {
 	return result
 }
 
+func (e *Evaluator) EvalIdentifier(n *ast.Identifier) Value {
+	// Look up the variable in the environment
+	binding, exists := e.env.Get(n.Name)
+	if !exists {
+		return e.newError(n.Position, ErrUndefinedVar,
+			"undefined variable '%s'", n.Name)
+	}
+
+	return binding.Value
+}
+
 func getValueType(v Value) string {
 	switch v.Type() {
 	case INTEGER_TYPE:
-		return "int"
+		return "INTEGER"
 	case FLOAT_TYPE:
-		return "float"
+		return "FLOAT"
 	case STRING_TYPE:
-		return "string"
+		return "STRING"
 	case BOOLEAN_TYPE:
-		return "bool"
+		return "BOOLEAN"
 	default:
 		return v.Type()
 	}
