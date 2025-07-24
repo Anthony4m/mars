@@ -1,6 +1,9 @@
 package evaluator
 
-import "fmt"
+import (
+	"fmt"
+	"mars/ast"
+)
 
 // Type constants
 const (
@@ -55,7 +58,7 @@ type FloatValue struct {
 	Value float64
 }
 
-func (f *FloatValue) Type() string   { return "FLOAT" }
+func (f *FloatValue) Type() string   { return FLOAT_TYPE }
 func (f *FloatValue) String() string { return fmt.Sprintf("%g", f.Value) }
 func (f *FloatValue) IsTruthy() bool { return f.Value != 0.0 }
 
@@ -83,6 +86,24 @@ type ReturnValue struct {
 func (r *ReturnValue) Type() string   { return RETURN_TYPE }
 func (r *ReturnValue) String() string { return r.Value.String() }
 func (r *ReturnValue) IsTruthy() bool { return r.Value.IsTruthy() }
+
+type ContinueValue struct {
+	Value    Value
+	Position ast.Position
+}
+
+func (i *ContinueValue) Type() string   { return CONTINUE_TYPE }
+func (i *ContinueValue) String() string { return fmt.Sprintf("%d", i.Value) }
+func (i *ContinueValue) IsTruthy() bool { return false }
+
+type BreakValue struct {
+	Value    Value
+	Position ast.Position
+}
+
+func (i *BreakValue) Type() string   { return BREAK_TYPE }
+func (i *BreakValue) String() string { return fmt.Sprintf("%d", i.Value) }
+func (i *BreakValue) IsTruthy() bool { return false }
 
 // Singleton values to save allocations
 var (

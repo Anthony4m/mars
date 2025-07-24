@@ -356,6 +356,9 @@ func (e *Evaluator) Eval(node ast.Node) Value {
 			if isError(result) {
 				return result
 			}
+			if ret, ok := result.(*ReturnValue); ok {
+				return ret.Value
+			}
 		}
 		return result
 	case *ast.ExpressionStatement:
@@ -433,11 +436,29 @@ func (e *Evaluator) Eval(node ast.Node) Value {
 		e.pushFrame("main", n.Position, "program")
 		defer e.popFrame()
 		return e.EvalIdentifier(n)
+	case *ast.ReturnStatement:
+		return e.evalReturnStatement(n)
+	case *ast.ContinueStatement:
+		return e.evalContinueStatement(n)
+	case *ast.BreakStatement:
+		return e.evalBreak(n)
 	case ast.Expression:
 		return e.Eval(n.(ast.Node))
 	default:
 		return nil
 	}
+}
+
+func (e *Evaluator) evalReturnStatement(n *ast.ReturnStatement) Value {
+	if n.Value == nil {
+		return NULL
+	}
+	var value Value
+	value = e.Eval(n.Value)
+	if isError(value) {
+		return value
+	}
+	return &ReturnValue{Value: value}
 }
 
 func (e *Evaluator) evalUnary(operator string, position ast.Position, right Value) Value {
@@ -705,6 +726,18 @@ func (e *Evaluator) EvalIdentifier(n *ast.Identifier) Value {
 	}
 
 	return binding.Value
+}
+
+func (e *Evaluator) evalContinueStatement(n *ast.ContinueStatement) Value {
+	return &ContinueValue{
+		Position: n.Position,
+	}
+}
+
+func (e *Evaluator) evalBreak(n *ast.BreakStatement) Value {
+	return &BreakValue{
+		Position: n.Position,
+	}
 }
 
 func getValueType(v Value) string {

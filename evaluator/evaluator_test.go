@@ -1467,39 +1467,39 @@ func TestBlockStatement(t *testing.T) {
 			},
 			expectedMessage: NULL_TYPE,
 		},
-		//{
-		//	name: "BlockWithReturnStatement",
-		//	input: &ast.Program{
-		//		Declarations: []ast.Declaration{
-		//			&ast.BlockStatement{
-		//				Statements: []ast.Statement{
-		//					&ast.ExpressionStatement{
-		//						Expression: &ast.Literal{
-		//							Token:    "100",
-		//							Value:    int64(100),
-		//							Position: ast.Position{Line: 1, Column: 1},
-		//						},
-		//					},
-		//					&ast.ReturnStatement{
-		//						Value: &ast.Literal{
-		//							Token:    "50",
-		//							Value:    int64(50),
-		//							Position: ast.Position{Line: 1, Column: 1},
-		//						},
-		//					},
-		//					&ast.ExpressionStatement{
-		//						Expression: &ast.Literal{
-		//							Token:    "200",
-		//							Value:    int64(200),
-		//							Position: ast.Position{Line: 1, Column: 1},
-		//						},
-		//					},
-		//				},
-		//			},
-		//		},
-		//	},
-		//	expectedMessage: INTEGER_TYPE, // Should return 50 from return statement
-		//},
+		{
+			name: "BlockWithReturnStatement",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.BlockStatement{
+						Statements: []ast.Statement{
+							&ast.ExpressionStatement{
+								Expression: &ast.Literal{
+									Token:    "100",
+									Value:    int64(100),
+									Position: ast.Position{Line: 1, Column: 1},
+								},
+							},
+							&ast.ReturnStatement{
+								Value: &ast.Literal{
+									Token:    "50",
+									Value:    int64(50),
+									Position: ast.Position{Line: 1, Column: 1},
+								},
+							},
+							&ast.ExpressionStatement{
+								Expression: &ast.Literal{
+									Token:    "200",
+									Value:    int64(200),
+									Position: ast.Position{Line: 1, Column: 1},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedMessage: INTEGER_TYPE, // Should return 50 from return statement
+		},
 		{
 			name: "BlockWithNestedBlockStatements",
 			input: &ast.Program{
@@ -1530,37 +1530,35 @@ func TestBlockStatement(t *testing.T) {
 			},
 			expectedMessage: INTEGER_TYPE,
 		},
-		//{
-		//	name: "BlockWithVariableDeclaration",
-		//	input: &ast.Program{
-		//		Declarations: []ast.Declaration{
-		//			&ast.BlockStatement{
-		//				Statements: []ast.Statement{
-		//					&ast.VariableStatement{
-		//						Identifier: &ast.Identifier{
-		//							Token:    "x",
-		//							Value:    "x",
-		//							Position: ast.Position{Line: 1, Column: 1},
-		//						},
-		//						Value: &ast.Literal{
-		//							Token:    "123",
-		//							Value:    int64(123),
-		//							Position: ast.Position{Line: 1, Column: 1},
-		//						},
-		//					},
-		//					&ast.ExpressionStatement{
-		//						Expression: &ast.Identifier{
-		//							Token:    "x",
-		//							Value:    "x",
-		//							Position: ast.Position{Line: 1, Column: 1},
-		//						},
-		//					},
-		//				},
-		//			},
-		//		},
-		//	},
-		//	expectedMessage: INTEGER_TYPE,
-		//},
+		{
+			name: "BlockWithVariableDeclaration",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.BlockStatement{
+						Statements: []ast.Statement{
+							&ast.VarDecl{
+								Name: &ast.Identifier{
+									Name:     "x",
+									Position: ast.Position{Line: 1, Column: 1},
+								},
+								Value: &ast.Literal{
+									Token:    "123",
+									Value:    int64(123),
+									Position: ast.Position{Line: 1, Column: 1},
+								},
+							},
+							&ast.ExpressionStatement{
+								Expression: &ast.Identifier{
+									Name:     "x",
+									Position: ast.Position{Line: 1, Column: 1},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedMessage: INTEGER_TYPE,
+		},
 		{
 			name: "BlockWithMixedTypesLastInteger",
 			input: &ast.Program{
@@ -1587,48 +1585,48 @@ func TestBlockStatement(t *testing.T) {
 			},
 			expectedMessage: INTEGER_TYPE,
 		},
-		//{
-		//	name: "BlockWithErrorInMiddle",
-		//	input: &ast.Program{
-		//		Declarations: []ast.Declaration{
-		//			&ast.BlockStatement{
-		//				Statements: []ast.Statement{
-		//					&ast.ExpressionStatement{
-		//						Expression: &ast.Literal{
-		//							Token:    "100",
-		//							Value:    int64(100),
-		//							Position: ast.Position{Line: 1, Column: 1},
-		//						},
-		//					},
-		//					&ast.ExpressionStatement{
-		//						Expression: &ast.InfixExpression{
-		//							Left: &ast.Literal{
-		//								Token:    "10",
-		//								Value:    int64(10),
-		//								Position: ast.Position{Line: 1, Column: 1},
-		//							},
-		//							Operator: "/",
-		//							Right: &ast.Literal{
-		//								Token:    "0",
-		//								Value:    int64(0),
-		//								Position: ast.Position{Line: 1, Column: 1},
-		//							},
-		//							Position: ast.Position{Line: 1, Column: 1},
-		//						},
-		//					},
-		//					&ast.ExpressionStatement{
-		//						Expression: &ast.Literal{
-		//							Token:    "200",
-		//							Value:    int64(200),
-		//							Position: ast.Position{Line: 1, Column: 1},
-		//						},
-		//					},
-		//				},
-		//			},
-		//		},
-		//	},
-		//	expectedMessage: "ERROR_TYPE", // Assuming you have error type handling
-		//},
+		{
+			name: "BlockWithErrorInMiddle",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.BlockStatement{
+						Statements: []ast.Statement{
+							&ast.ExpressionStatement{
+								Expression: &ast.Literal{
+									Token:    "100",
+									Value:    int64(100),
+									Position: ast.Position{Line: 1, Column: 1},
+								},
+							},
+							&ast.ExpressionStatement{
+								Expression: &ast.BinaryExpression{
+									Left: &ast.Literal{
+										Token:    "10",
+										Value:    int64(10),
+										Position: ast.Position{Line: 1, Column: 1},
+									},
+									Operator: "/",
+									Right: &ast.Literal{
+										Token:    "0",
+										Value:    int64(0),
+										Position: ast.Position{Line: 1, Column: 1},
+									},
+									Position: ast.Position{Line: 1, Column: 1},
+								},
+							},
+							&ast.ExpressionStatement{
+								Expression: &ast.Literal{
+									Token:    "200",
+									Value:    int64(200),
+									Position: ast.Position{Line: 1, Column: 1},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedMessage: ERROR_TYPE, // Assuming you have error type handling
+		},
 	}
 
 	for _, tc := range tests {
