@@ -1,8 +1,10 @@
 package evaluator
 
 import (
+	"bytes"
 	"fmt"
 	"mars/ast"
+	"strings"
 )
 
 // Type constants
@@ -99,6 +101,37 @@ func (i *ContinueValue) IsTruthy() bool { return false }
 type BreakValue struct {
 	Value    Value
 	Position ast.Position
+}
+type FunctionValue struct {
+	Name       string
+	Parameters []*ast.Parameter
+	Body       *ast.BlockStatement
+	ReturnType *ast.Type
+	Env        *Environment // For closure support
+	Position   ast.Position
+}
+
+func (fv *FunctionValue) String() string {
+	var out bytes.Buffer
+	var params []string
+	for _, p := range fv.Parameters {
+		params = append(params, p.Name.String())
+	}
+	out.WriteString("fn")
+	out.WriteString("(")
+	out.WriteString(strings.Join(params, ", "))
+	out.WriteString(") {\n")
+	out.WriteString(fv.Body.String())
+	out.WriteString("\n}")
+	return out.String()
+}
+
+func (fv *FunctionValue) Type() string {
+	return "FUNCTION"
+}
+
+func (fv *FunctionValue) IsTruthy() bool {
+	return true
 }
 
 func (i *BreakValue) Type() string   { return BREAK_TYPE }

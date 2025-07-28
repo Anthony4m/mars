@@ -442,6 +442,10 @@ func (e *Evaluator) Eval(node ast.Node) Value {
 		return e.evalContinueStatement(n)
 	case *ast.BreakStatement:
 		return e.evalBreak(n)
+	case *ast.FuncDecl:
+		e.pushFrame(n.Name.Name, n.Position, n.Signature.String())
+		defer e.popFrame()
+		return e.evalFunctionDecl(n)
 	case ast.Expression:
 		return e.Eval(n.(ast.Node))
 	default:
@@ -497,6 +501,31 @@ func (e *Evaluator) evalLiteral(lit *ast.Literal) Value {
 	default:
 		return newError("unknown literal type: %T", lit.Value)
 	}
+}
+
+func (e *Evaluator) evalFunctionDecl(n *ast.FuncDecl) Value {
+	// Check for identifier
+	if n.Name == nil {
+		return e.newError(n.Position, ErrSyntaxError, "function declaration missing name")
+	}
+
+	// Create a function value that encapsulates the function definition
+	function := &FunctionValue{
+		Name:       n.Name.Name,
+		Parameters: n.Signature.Parameters,
+		Body:       n.Body,
+		ReturnType: n.Signature.ReturnType,
+		Env:        e.env, // Capture current environment for closures
+		Position:   n.Position,
+	}
+
+	const functionIsMutable = false
+	// Store the function in the environment
+	e.env.Set(n.Name.Name, function, functionIsMutable)
+
+	// Function declarations typically return nil/void
+	// or the function itself for REPL convenience
+	return function
 }
 
 func (e *Evaluator) EvalVariableDecl(n *ast.VarDecl) Value {
