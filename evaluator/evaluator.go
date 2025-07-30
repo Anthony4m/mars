@@ -366,6 +366,7 @@ func (e *Evaluator) Eval(node ast.Node) Value {
 	case *ast.Literal:
 		return e.evalLiteral(n)
 	case *ast.BinaryExpression:
+		// TODO: Refactor this into its own function, possibly extract the sort circuiting part
 		if n.Operator == "&&" {
 			left := e.Eval(n.Left)
 			if isError(left) {
