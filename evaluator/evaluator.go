@@ -447,6 +447,8 @@ func (e *Evaluator) Eval(node ast.Node) Value {
 		e.pushFrame(n.Name.Name, n.Position, n.Signature.String())
 		defer e.popFrame()
 		return e.evalFunctionDecl(n)
+	case *ast.FunctionCall:
+		return e.evalFunctionCall(n)
 	case ast.Expression:
 		return e.Eval(n.(ast.Node))
 	default:
@@ -768,6 +770,60 @@ func (e *Evaluator) evalBreak(n *ast.BreakStatement) Value {
 	return &BreakValue{
 		Position: n.Position,
 	}
+}
+
+func (e *Evaluator) evalFunctionCall(n *ast.FunctionCall) Value {
+	function := e.Eval(n.Function)
+	if isError(function) {
+		return function
+	}
+
+	var results []Value
+	for _, args := range n.Arguments {
+		evaluated := e.Eval(args)
+
+		if isError(evaluated) {
+			return evaluated
+		}
+		results = append(results, evaluated)
+	}
+
+	if len(results) == 1 && isError(results[0]) {
+		return results[0]
+	}
+
+	isFunction, ok := function.(*FunctionValue)
+	if !ok {
+		return e.newError(n.Position, ErrNotAFunction,
+			"'%s' is not a function", function.Type())
+
+	}
+	e.pushFrame(isFunction.Name, n.Position, "call")
+	defer e.popFrame()
+
+	oldEnv := e.env
+	e.env = NewEnclosedEnvironment(isFunction.Env)
+	defer func() { e.env = oldEnv }()
+
+	if len(results) != len(isFunction.Parameters) {
+		return e.newError(n.Position, ErrWrongArgCount,
+			"function '%s' expects %d arguments, got %d",
+			isFunction.Name, len(isFunction.Parameters), len(results))
+	}
+
+	for paramIdx, param := range isFunction.Parameters {
+		e.env.Set(param.Name.Name, results[paramIdx], false)
+	}
+	execution := e.Eval(isFunction.Body)
+	if isError(execution) {
+		return execution
+	}
+	if returnValue, ok := execution.(*ReturnValue); ok {
+		return returnValue.Value
+	}
+
+	// If no explicit return, return NULL
+	return NULL
 }
 
 func getValueType(v Value) string {
