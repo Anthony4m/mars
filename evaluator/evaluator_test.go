@@ -2282,3 +2282,750 @@ func TestEvaluator_EvalAssignment(t *testing.T) {
 		})
 	}
 }
+
+func TestFuncDecl(t *testing.T) {
+	tests := []struct {
+		name            string
+		input           ast.Node
+		expectedMessage string
+	}{
+		{
+			name: "SimpleFunctionDeclaration",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.FuncDecl{
+						Name: &ast.Identifier{Name: "add"},
+						Signature: &ast.FunctionSignature{
+							Parameters: []*ast.Parameter{},
+							ReturnType: &ast.Type{BaseType: INTEGER_TYPE},
+							Position:   ast.Position{Line: 1, Column: 1},
+						},
+						Body: &ast.BlockStatement{
+							Statements: []ast.Statement{
+								&ast.ReturnStatement{
+									Value: &ast.Literal{
+										Token:    "42",
+										Value:    int64(42),
+										Position: ast.Position{Line: 2, Column: 5},
+									},
+									Position: ast.Position{Line: 2, Column: 1},
+								},
+							},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "FUNCTION",
+		},
+		{
+			name: "FunctionWithParameters",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.FuncDecl{
+						Name: &ast.Identifier{Name: "multiply"},
+						Signature: &ast.FunctionSignature{
+							Parameters: []*ast.Parameter{
+								{
+									Name: &ast.Identifier{Name: "a"},
+									Type: &ast.Type{BaseType: INTEGER_TYPE},
+								},
+								{
+									Name: &ast.Identifier{Name: "b"},
+									Type: &ast.Type{BaseType: INTEGER_TYPE},
+								},
+							},
+							ReturnType: &ast.Type{BaseType: INTEGER_TYPE},
+							Position:   ast.Position{Line: 1, Column: 1},
+						},
+						Body: &ast.BlockStatement{
+							Statements: []ast.Statement{
+								&ast.ReturnStatement{
+									Value: &ast.BinaryExpression{
+										Left:     &ast.Identifier{Name: "a"},
+										Operator: "*",
+										Right:    &ast.Identifier{Name: "b"},
+										Position: ast.Position{Line: 2, Column: 9},
+									},
+									Position: ast.Position{Line: 2, Column: 5},
+								},
+							},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "FUNCTION",
+		},
+		{
+			name: "FunctionWithoutReturnType",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.FuncDecl{
+						Name: &ast.Identifier{Name: "printHello"},
+						Signature: &ast.FunctionSignature{
+							Parameters: []*ast.Parameter{},
+							ReturnType: nil,
+							Position:   ast.Position{Line: 1, Column: 1},
+						},
+						Body: &ast.BlockStatement{
+							Statements: []ast.Statement{
+								&ast.ExpressionStatement{
+									Expression: &ast.Literal{
+										Token:    "hello",
+										Value:    "hello",
+										Position: ast.Position{Line: 2, Column: 5},
+									},
+								},
+							},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "FUNCTION",
+		},
+		{
+			name: "FunctionWithoutName",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.FuncDecl{
+						Name: nil,
+						Signature: &ast.FunctionSignature{
+							Parameters: []*ast.Parameter{},
+							ReturnType: &ast.Type{BaseType: INTEGER_TYPE},
+							Position:   ast.Position{Line: 1, Column: 1},
+						},
+						Body: &ast.BlockStatement{
+							Statements: []ast.Statement{
+								&ast.ReturnStatement{
+									Value: &ast.Literal{
+										Token:    "10",
+										Value:    int64(10),
+										Position: ast.Position{Line: 2, Column: 5},
+									},
+									Position: ast.Position{Line: 2, Column: 1},
+								},
+							},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "function declaration missing name",
+		},
+		{
+			name: "FunctionWithVoidReturn",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.FuncDecl{
+						Name: &ast.Identifier{Name: "doNothing"},
+						Signature: &ast.FunctionSignature{
+							Parameters: []*ast.Parameter{},
+							ReturnType: nil,
+							Position:   ast.Position{Line: 1, Column: 1},
+						},
+						Body: &ast.BlockStatement{
+							Statements: []ast.Statement{},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "FUNCTION",
+		},
+		{
+			name: "FunctionWithComplexBody",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.FuncDecl{
+						Name: &ast.Identifier{Name: "complexFunc"},
+						Signature: &ast.FunctionSignature{
+							Parameters: []*ast.Parameter{
+								{
+									Name: &ast.Identifier{Name: "x"},
+									Type: &ast.Type{BaseType: INTEGER_TYPE},
+								},
+							},
+							ReturnType: &ast.Type{BaseType: INTEGER_TYPE},
+							Position:   ast.Position{Line: 1, Column: 1},
+						},
+						Body: &ast.BlockStatement{
+							Statements: []ast.Statement{
+								&ast.VarDecl{
+									Name: &ast.Identifier{Name: "result"},
+									Value: &ast.BinaryExpression{
+										Left:     &ast.Identifier{Name: "x"},
+										Operator: "*",
+										Right:    &ast.Literal{Token: "2", Value: int64(2)},
+										Position: ast.Position{Line: 2, Column: 15},
+									},
+									Mutable:  false,
+									Position: ast.Position{Line: 2, Column: 5},
+								},
+								&ast.IfStatement{
+									Condition: &ast.BinaryExpression{
+										Left:     &ast.Identifier{Name: "result"},
+										Operator: ">",
+										Right:    &ast.Literal{Token: "10", Value: int64(10)},
+										Position: ast.Position{Line: 3, Column: 15},
+									},
+									Consequence: &ast.BlockStatement{
+										Statements: []ast.Statement{
+											&ast.ReturnStatement{
+												Value:    &ast.Identifier{Name: "result"},
+												Position: ast.Position{Line: 4, Column: 9},
+											},
+										},
+									},
+									Position: ast.Position{Line: 3, Column: 5},
+								},
+								&ast.ReturnStatement{
+									Value:    &ast.Literal{Token: "0", Value: int64(0)},
+									Position: ast.Position{Line: 6, Column: 5},
+								},
+							},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "FUNCTION",
+		},
+		{
+			name: "FunctionWithStringParameter",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.FuncDecl{
+						Name: &ast.Identifier{Name: "greet"},
+						Signature: &ast.FunctionSignature{
+							Parameters: []*ast.Parameter{
+								{
+									Name: &ast.Identifier{Name: "name"},
+									Type: &ast.Type{BaseType: STRING_TYPE},
+								},
+							},
+							ReturnType: &ast.Type{BaseType: STRING_TYPE},
+							Position:   ast.Position{Line: 1, Column: 1},
+						},
+						Body: &ast.BlockStatement{
+							Statements: []ast.Statement{
+								&ast.ReturnStatement{
+									Value: &ast.BinaryExpression{
+										Left:     &ast.Literal{Token: "Hello, ", Value: "Hello, "},
+										Operator: "+",
+										Right:    &ast.Identifier{Name: "name"},
+										Position: ast.Position{Line: 2, Column: 16},
+									},
+									Position: ast.Position{Line: 2, Column: 9},
+								},
+							},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "FUNCTION",
+		},
+		{
+			name: "MultipleFunctionDeclarations",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.FuncDecl{
+						Name: &ast.Identifier{Name: "first"},
+						Signature: &ast.FunctionSignature{
+							Parameters: []*ast.Parameter{},
+							ReturnType: &ast.Type{BaseType: INTEGER_TYPE},
+							Position:   ast.Position{Line: 1, Column: 1},
+						},
+						Body: &ast.BlockStatement{
+							Statements: []ast.Statement{
+								&ast.ReturnStatement{
+									Value:    &ast.Literal{Token: "1", Value: int64(1)},
+									Position: ast.Position{Line: 2, Column: 5},
+								},
+							},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+					&ast.FuncDecl{
+						Name: &ast.Identifier{Name: "second"},
+						Signature: &ast.FunctionSignature{
+							Parameters: []*ast.Parameter{},
+							ReturnType: &ast.Type{BaseType: INTEGER_TYPE},
+							Position:   ast.Position{Line: 4, Column: 1},
+						},
+						Body: &ast.BlockStatement{
+							Statements: []ast.Statement{
+								&ast.ReturnStatement{
+									Value:    &ast.Literal{Token: "2", Value: int64(2)},
+									Position: ast.Position{Line: 5, Column: 5},
+								},
+							},
+						},
+						Position: ast.Position{Line: 4, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "FUNCTION",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			eval := New()
+			result := eval.Eval(tc.input)
+
+			// Check if we're expecting an error message
+			if strings.Contains(tc.expectedMessage, "error") ||
+				strings.Contains(tc.expectedMessage, "missing") {
+				// Expecting an error
+				if result == nil {
+					t.Fatalf("[%s] Expected error but got nil result", tc.name)
+				}
+				if !strings.Contains(result.String(), tc.expectedMessage) &&
+					result.Type() != tc.expectedMessage {
+					t.Errorf("[%s] Expected error containing '%s' but got '%s'",
+						tc.name, tc.expectedMessage, result.String())
+				}
+			} else if tc.expectedMessage != "" {
+				// Expecting a successful result with specific type
+				if result == nil {
+					t.Fatalf("[%s] Expected %s but got nil result", tc.name, tc.expectedMessage)
+				}
+				if result.Type() != tc.expectedMessage {
+					t.Errorf("[%s] Expected %s but got %s", tc.name, tc.expectedMessage, result.Type())
+				}
+			} else if result != nil && result.Type() != "" {
+				t.Errorf("[%s] Expected empty result but got %s", tc.name, result.Type())
+			}
+		})
+	}
+}
+
+func TestFuncCall(t *testing.T) {
+	tests := []struct {
+		name            string
+		input           ast.Node
+		expectedMessage string
+	}{
+		{
+			name: "SimpleFunctionCall",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					// First declare the function
+					&ast.FuncDecl{
+						Name: &ast.Identifier{Name: "simpleFunc"},
+						Signature: &ast.FunctionSignature{
+							Parameters: []*ast.Parameter{},
+							ReturnType: &ast.Type{BaseType: INTEGER_TYPE},
+							Position:   ast.Position{Line: 1, Column: 1},
+						},
+						Body: &ast.BlockStatement{
+							Statements: []ast.Statement{
+								&ast.ReturnStatement{
+									Value: &ast.Literal{
+										Token:    "42",
+										Value:    int64(42),
+										Position: ast.Position{Line: 2, Column: 9},
+									},
+									Position: ast.Position{Line: 2, Column: 5},
+								},
+							},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+					// Then call it
+					&ast.ExpressionStatement{
+						Expression: &ast.FunctionCall{
+							Function:  &ast.Identifier{Name: "simpleFunc"},
+							Arguments: []ast.Expression{},
+							Position:  ast.Position{Line: 4, Column: 1},
+						},
+					},
+				},
+			},
+			expectedMessage: INTEGER_TYPE,
+		},
+		{
+			name: "FunctionCallWithArguments",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					// Declare function with parameters
+					&ast.FuncDecl{
+						Name: &ast.Identifier{Name: "add"},
+						Signature: &ast.FunctionSignature{
+							Parameters: []*ast.Parameter{
+								{
+									Name: &ast.Identifier{Name: "a"},
+									Type: &ast.Type{BaseType: INTEGER_TYPE},
+								},
+								{
+									Name: &ast.Identifier{Name: "b"},
+									Type: &ast.Type{BaseType: INTEGER_TYPE},
+								},
+							},
+							ReturnType: &ast.Type{BaseType: INTEGER_TYPE},
+							Position:   ast.Position{Line: 1, Column: 1},
+						},
+						Body: &ast.BlockStatement{
+							Statements: []ast.Statement{
+								&ast.ReturnStatement{
+									Value: &ast.BinaryExpression{
+										Left:     &ast.Identifier{Name: "a"},
+										Operator: "+",
+										Right:    &ast.Identifier{Name: "b"},
+										Position: ast.Position{Line: 2, Column: 16},
+									},
+									Position: ast.Position{Line: 2, Column: 9},
+								},
+							},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+					// Call the function
+					&ast.ExpressionStatement{
+						Expression: &ast.FunctionCall{
+							Function: &ast.Identifier{Name: "add"},
+							Arguments: []ast.Expression{
+								&ast.Literal{Token: "5", Value: int64(5)},
+								&ast.Literal{Token: "3", Value: int64(3)},
+							},
+							Position: ast.Position{Line: 4, Column: 1},
+						},
+					},
+				},
+			},
+			expectedMessage: INTEGER_TYPE,
+		},
+		{
+			name: "FunctionCallWithStringReturn",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.FuncDecl{
+						Name: &ast.Identifier{Name: "greet"},
+						Signature: &ast.FunctionSignature{
+							Parameters: []*ast.Parameter{
+								{
+									Name: &ast.Identifier{Name: "name"},
+									Type: &ast.Type{BaseType: STRING_TYPE},
+								},
+							},
+							ReturnType: &ast.Type{BaseType: STRING_TYPE},
+							Position:   ast.Position{Line: 1, Column: 1},
+						},
+						Body: &ast.BlockStatement{
+							Statements: []ast.Statement{
+								&ast.ReturnStatement{
+									Value: &ast.BinaryExpression{
+										Left:     &ast.Literal{Token: "Hello, ", Value: "Hello, "},
+										Operator: "+",
+										Right:    &ast.Identifier{Name: "name"},
+										Position: ast.Position{Line: 2, Column: 16},
+									},
+									Position: ast.Position{Line: 2, Column: 9},
+								},
+							},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+					&ast.ExpressionStatement{
+						Expression: &ast.FunctionCall{
+							Function: &ast.Identifier{Name: "greet"},
+							Arguments: []ast.Expression{
+								&ast.Literal{Token: "World", Value: "World"},
+							},
+							Position: ast.Position{Line: 4, Column: 1},
+						},
+					},
+				},
+			},
+			expectedMessage: STRING_TYPE,
+		},
+		{
+			name: "FunctionCallUndefinedFunction",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.ExpressionStatement{
+						Expression: &ast.FunctionCall{
+							Function:  &ast.Identifier{Name: "nonExistentFunc"},
+							Arguments: []ast.Expression{},
+							Position:  ast.Position{Line: 1, Column: 1},
+						},
+					},
+				},
+			},
+			expectedMessage: "undefined variable 'nonExistentFunc",
+		},
+		{
+			name: "FunctionCallWithWrongArgumentCount",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.FuncDecl{
+						Name: &ast.Identifier{Name: "singleParam"},
+						Signature: &ast.FunctionSignature{
+							Parameters: []*ast.Parameter{
+								{
+									Name: &ast.Identifier{Name: "x"},
+									Type: &ast.Type{BaseType: INTEGER_TYPE},
+								},
+							},
+							ReturnType: &ast.Type{BaseType: INTEGER_TYPE},
+							Position:   ast.Position{Line: 1, Column: 1},
+						},
+						Body: &ast.BlockStatement{
+							Statements: []ast.Statement{
+								&ast.ReturnStatement{
+									Value:    &ast.Identifier{Name: "x"},
+									Position: ast.Position{Line: 2, Column: 9},
+								},
+							},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+					&ast.ExpressionStatement{
+						Expression: &ast.FunctionCall{
+							Function: &ast.Identifier{Name: "singleParam"},
+							Arguments: []ast.Expression{
+								&ast.Literal{Token: "1", Value: int64(1)},
+								&ast.Literal{Token: "2", Value: int64(2)}, // Extra argument
+							},
+							Position: ast.Position{Line: 4, Column: 1},
+						},
+					},
+				},
+			},
+			expectedMessage: "function 'singleParam' expects 1 arguments, got 2",
+		},
+		{
+			name: "FunctionCallWithTypeMismatch",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.FuncDecl{
+						Name: &ast.Identifier{Name: "expectInt"},
+						Signature: &ast.FunctionSignature{
+							Parameters: []*ast.Parameter{
+								{
+									Name: &ast.Identifier{Name: "num"},
+									Type: &ast.Type{BaseType: INTEGER_TYPE},
+								},
+							},
+							ReturnType: &ast.Type{BaseType: INTEGER_TYPE},
+							Position:   ast.Position{Line: 1, Column: 1},
+						},
+						Body: &ast.BlockStatement{
+							Statements: []ast.Statement{
+								&ast.ReturnStatement{
+									Value:    &ast.Identifier{Name: "num"},
+									Position: ast.Position{Line: 2, Column: 9},
+								},
+							},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+					&ast.ExpressionStatement{
+						Expression: &ast.FunctionCall{
+							Function: &ast.Identifier{Name: "expectInt"},
+							Arguments: []ast.Expression{
+								&ast.Literal{Token: "hello", Value: "hello"}, // String instead of int
+							},
+							Position: ast.Position{Line: 4, Column: 1},
+						},
+					},
+				},
+			},
+			expectedMessage: "type mismatch: cannot assign string to int",
+		},
+		{
+			name: "VoidFunctionCall",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.FuncDecl{
+						Name: &ast.Identifier{Name: "voidFunc"},
+						Signature: &ast.FunctionSignature{
+							Parameters: []*ast.Parameter{},
+							ReturnType: nil, // Void return
+							Position:   ast.Position{Line: 1, Column: 1},
+						},
+						Body: &ast.BlockStatement{
+							Statements: []ast.Statement{
+								&ast.ExpressionStatement{
+									Expression: &ast.Literal{
+										Token:    "executed",
+										Value:    "executed",
+										Position: ast.Position{Line: 2, Column: 9},
+									},
+								},
+							},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+					&ast.ExpressionStatement{
+						Expression: &ast.FunctionCall{
+							Function:  &ast.Identifier{Name: "voidFunc"},
+							Arguments: []ast.Expression{},
+							Position:  ast.Position{Line: 4, Column: 1},
+						},
+					},
+				},
+			},
+			expectedMessage: NULL_TYPE, // Void functions return nothing/nil
+		},
+		{
+			name: "NestedFunctionCall",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.FuncDecl{
+						Name: &ast.Identifier{Name: "doubleValue"},
+						Signature: &ast.FunctionSignature{
+							Parameters: []*ast.Parameter{
+								{
+									Name: &ast.Identifier{Name: "x"},
+									Type: &ast.Type{BaseType: INTEGER_TYPE},
+								},
+							},
+							ReturnType: &ast.Type{BaseType: INTEGER_TYPE},
+							Position:   ast.Position{Line: 1, Column: 1},
+						},
+						Body: &ast.BlockStatement{
+							Statements: []ast.Statement{
+								&ast.ReturnStatement{
+									Value: &ast.BinaryExpression{
+										Left:     &ast.Identifier{Name: "x"},
+										Operator: "*",
+										Right:    &ast.Literal{Token: "2", Value: int64(2)},
+										Position: ast.Position{Line: 2, Column: 16},
+									},
+									Position: ast.Position{Line: 2, Column: 9},
+								},
+							},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+					&ast.FuncDecl{
+						Name: &ast.Identifier{Name: "addTen"},
+						Signature: &ast.FunctionSignature{
+							Parameters: []*ast.Parameter{
+								{
+									Name: &ast.Identifier{Name: "x"},
+									Type: &ast.Type{BaseType: INTEGER_TYPE},
+								},
+							},
+							ReturnType: &ast.Type{BaseType: INTEGER_TYPE},
+							Position:   ast.Position{Line: 5, Column: 1},
+						},
+						Body: &ast.BlockStatement{
+							Statements: []ast.Statement{
+								&ast.ReturnStatement{
+									Value: &ast.BinaryExpression{
+										Left:     &ast.Identifier{Name: "x"},
+										Operator: "+",
+										Right:    &ast.Literal{Token: "10", Value: int64(10)},
+										Position: ast.Position{Line: 6, Column: 16},
+									},
+									Position: ast.Position{Line: 6, Column: 9},
+								},
+							},
+						},
+						Position: ast.Position{Line: 5, Column: 1},
+					},
+					&ast.ExpressionStatement{
+						Expression: &ast.FunctionCall{
+							Function: &ast.Identifier{Name: "addTen"},
+							Arguments: []ast.Expression{
+								&ast.FunctionCall{
+									Function: &ast.Identifier{Name: "doubleValue"},
+									Arguments: []ast.Expression{
+										&ast.Literal{Token: "5", Value: int64(5)},
+									},
+									Position: ast.Position{Line: 9, Column: 13},
+								},
+							},
+							Position: ast.Position{Line: 9, Column: 1},
+						},
+					},
+				},
+			},
+			expectedMessage: INTEGER_TYPE,
+		},
+		{
+			name: "FunctionCallWithBooleanReturn",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.FuncDecl{
+						Name: &ast.Identifier{Name: "isPositive"},
+						Signature: &ast.FunctionSignature{
+							Parameters: []*ast.Parameter{
+								{
+									Name: &ast.Identifier{Name: "num"},
+									Type: &ast.Type{BaseType: INTEGER_TYPE},
+								},
+							},
+							ReturnType: &ast.Type{BaseType: BOOLEAN_TYPE},
+							Position:   ast.Position{Line: 1, Column: 1},
+						},
+						Body: &ast.BlockStatement{
+							Statements: []ast.Statement{
+								&ast.ReturnStatement{
+									Value: &ast.BinaryExpression{
+										Left:     &ast.Identifier{Name: "num"},
+										Operator: ">",
+										Right:    &ast.Literal{Token: "0", Value: int64(0)},
+										Position: ast.Position{Line: 2, Column: 16},
+									},
+									Position: ast.Position{Line: 2, Column: 9},
+								},
+							},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+					&ast.ExpressionStatement{
+						Expression: &ast.FunctionCall{
+							Function: &ast.Identifier{Name: "isPositive"},
+							Arguments: []ast.Expression{
+								&ast.Literal{Token: "15", Value: int64(15)},
+							},
+							Position: ast.Position{Line: 4, Column: 1},
+						},
+					},
+				},
+			},
+			expectedMessage: BOOLEAN_TYPE,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			eval := New()
+			result := eval.Eval(tc.input)
+
+			// Check if we're expecting an error message
+			if strings.Contains(tc.expectedMessage, "error") ||
+				strings.Contains(tc.expectedMessage, "undefined") ||
+				strings.Contains(tc.expectedMessage, "wrong") ||
+				strings.Contains(tc.expectedMessage, "expects") ||
+				strings.Contains(tc.expectedMessage, "mismatch") {
+				// Expecting an error
+				if result == nil {
+					t.Fatalf("[%s] Expected error but got nil result", tc.name)
+				}
+				if !strings.Contains(result.String(), tc.expectedMessage) &&
+					result.Type() != tc.expectedMessage {
+					t.Errorf("[%s] Expected error containing '%s' but got '%s'",
+						tc.name, tc.expectedMessage, result.String())
+				}
+			} else if tc.expectedMessage != "" {
+				// Expecting a successful result with specific type
+				if result == nil {
+					t.Fatalf("[%s] Expected %s but got nil result", tc.name, tc.expectedMessage)
+				}
+				if result.Type() != tc.expectedMessage {
+					t.Errorf("[%s] Expected %s but got %s", tc.name, tc.expectedMessage, result.Type())
+				}
+			} else if result != nil && result.Type() != "" {
+				// Expecting empty result (void function)
+				t.Errorf("[%s] Expected empty result but got %s", tc.name, result.Type())
+			}
+		})
+	}
+}

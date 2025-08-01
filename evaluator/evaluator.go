@@ -3,6 +3,7 @@ package evaluator
 import (
 	"fmt"
 	"mars/ast"
+	"strings"
 )
 
 // Error codes
@@ -444,8 +445,6 @@ func (e *Evaluator) Eval(node ast.Node) Value {
 	case *ast.BreakStatement:
 		return e.evalBreak(n)
 	case *ast.FuncDecl:
-		e.pushFrame(n.Name.Name, n.Position, n.Signature.String())
-		defer e.popFrame()
 		return e.evalFunctionDecl(n)
 	case *ast.FunctionCall:
 		return e.evalFunctionCall(n)
@@ -511,6 +510,8 @@ func (e *Evaluator) evalFunctionDecl(n *ast.FuncDecl) Value {
 	if n.Name == nil {
 		return e.newError(n.Position, ErrSyntaxError, "function declaration missing name")
 	}
+	e.pushFrame(n.Name.Name, n.Position, n.Signature.String())
+	defer e.popFrame()
 
 	// Create a function value that encapsulates the function definition
 	function := &FunctionValue{
@@ -812,7 +813,17 @@ func (e *Evaluator) evalFunctionCall(n *ast.FunctionCall) Value {
 	}
 
 	for paramIdx, param := range isFunction.Parameters {
-		e.env.Set(param.Name.Name, results[paramIdx], false)
+		argValue := results[paramIdx]
+		paramType := param.Type.BaseType
+		argType := getValueType(argValue)
+
+		if !e.TypesCompatible(paramType, argType) {
+			return e.newError(n.Position, ErrTypeMismatch,
+				"type mismatch: cannot assign %s to %s",
+				strings.ToLower(argType), strings.ToLower(paramType))
+		}
+
+		e.env.Set(param.Name.Name, argValue, false)
 	}
 	execution := e.Eval(isFunction.Body)
 	if isError(execution) {
