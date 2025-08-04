@@ -210,6 +210,17 @@ unsafe {
 3. **Documentation**: Keep docs up to date
 4. **Performance**: Monitor and optimize critical paths
 
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guide](../CONTRIBUTING.md) for detailed information on:
+
+- Development setup and environment
+- Coding standards and guidelines
+- Testing requirements
+- Contribution workflow
+- Current development priorities
+- How to report issues and request features
+
 ## Conclusion
 
 Mars has achieved a **solid foundation** with all core language features working correctly. The lexer, parser, analyzer, and evaluator are complete and well-tested. The language can execute basic programs with variables, functions, control flow, and output.

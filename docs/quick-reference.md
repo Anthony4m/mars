@@ -68,12 +68,24 @@ for i := 0; i < 10; i = i + 1 {
 ### Built-in Functions
 
 ```mars
-// Output function (fully implemented)
+// Output functions (fully implemented)
 log("Hello, World!");
-log(42);
-log(3.14);
-log(true);
-log(add(5, 3));
+print("No newline");
+println("With newline");
+printf("Value: %s", "test");
+
+// Array functions
+let arr := [1, 2, 3];
+let length := len(arr);
+let newArr := append(arr, 4);
+
+// Math functions
+let sine := sin(0);
+let cosine := cos(0);
+let root := sqrt(16);
+
+// Time function
+let currentTime := now();
 ```
 
 ## Data Types
@@ -291,16 +303,27 @@ unsafe {
 }
 ```
 
-### Built-in Functions 🔄 **Limited**
+### Built-in Functions ✅ **Working**
 
 ```mars
-// Only log() is implemented
-log("Hello");  // ✅ Working
+// Output functions
+log("Hello");           // ✅ Working
+print("No newline");    // ✅ Working
+println("With newline"); // ✅ Working
+printf("Value: %s", "test"); // ✅ Working
 
-// These are planned but not implemented
-// len(array);      // 🔄 Planned
-// append(slice, x); // 🔄 Planned
-// abs(-5);         // 🔄 Planned
+// Array functions
+let arr := [1, 2, 3];
+let length := len(arr);     // ✅ Working
+let newArr := append(arr, 4); // ✅ Working
+
+// Math functions
+let sine := sin(0);         // ✅ Working
+let cosine := cos(0);       // ✅ Working
+let root := sqrt(16);       // ✅ Working
+
+// Time function
+let currentTime := now();   // ✅ Working
 ```
 
 ## Testing Your Code
@@ -343,11 +366,21 @@ error[E0001]: unexpected token EOF in expression
 2. **Check the test suite** in `evaluator/evaluator_test.go` for more examples
 3. **Contribute** to implement missing features like array/struct runtime support
 
+### Want to Contribute?
+
+If you're interested in contributing to Mars, check out our [Contributing Guide](../CONTRIBUTING.md) for:
+
+- Development setup instructions
+- Coding standards and guidelines
+- Current development priorities
+- How to submit pull requests
+- Good first issues for beginners
+
 ## Implementation Status Summary
 
 - ✅ **Core Language**: Variables, functions, control flow, operators
 - ✅ **Runtime**: AST evaluation, environment management, error handling
-- ✅ **Built-ins**: `log()` function for output
+- ✅ **Built-ins**: `log()`, `print()`, `len()`, `append()`, `sin()`, `cos()`, `sqrt()`, `now()` functions
 - 🔄 **Data Structures**: Parsed but not evaluated
 - 🔄 **Advanced Features**: Unsafe blocks, member access
 - 📋 **Tooling**: CLI compiler, REPL, code generation

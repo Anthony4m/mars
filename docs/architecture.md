@@ -235,20 +235,31 @@ mars/
 
 ## Contributing
 
-### Development Workflow
+We welcome contributions! Please see our [Contributing Guide](../CONTRIBUTING.md) for detailed information on:
+
+- Development setup and environment
+- Coding standards and guidelines
+- Testing requirements
+- Contribution workflow
+- Current development priorities
+- How to report issues and request features
+
+### Quick Overview
+
+**Development Workflow:**
 1. Fork the repository
-2. Create a feature branch
+2. Create your feature branch
 3. Write tests
 4. Implement feature
 5. Submit pull request
 
-### Code Review Process
+**Code Review Process:**
 1. Automated tests must pass
 2. Code must be formatted
 3. Documentation must be updated
 4. At least one reviewer must approve
 
-### Release Process
+**Release Process:**
 1. Update version numbers
 2. Update changelog
 3. Create release tag

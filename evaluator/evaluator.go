@@ -317,7 +317,27 @@ func (e *Evaluator) typeMismatchError(pos ast.Position, op string, left, right V
 }
 
 func New() *Evaluator {
-	return &Evaluator{env: NewEnvironment()}
+	evaluator := &Evaluator{env: NewEnvironment()}
+
+	// Register built-in functions
+	for name, builtin := range BuiltinFunctions {
+		// Create a FunctionValue for the built-in function
+		function := &FunctionValue{
+			Name:       name,
+			Parameters: []*ast.Parameter{}, // Built-ins handle their own parameter validation
+			Body:       nil,                // Built-ins don't have AST bodies
+			ReturnType: nil,                // Built-ins can return different types
+			Env:        evaluator.env,
+			Position:   ast.Position{Line: 0, Column: 0},
+			IsBuiltin:  true,
+			BuiltinFn:  builtin.Function,
+		}
+
+		// Store the built-in function in the environment
+		evaluator.env.Set(name, function, false)
+	}
+
+	return evaluator
 }
 
 /*
@@ -448,6 +468,8 @@ func (e *Evaluator) Eval(node ast.Node) Value {
 		return e.evalFunctionDecl(n)
 	case *ast.FunctionCall:
 		return e.evalFunctionCall(n)
+	case *ast.ArrayLiteral:
+		return e.evalArrayLiteral(n)
 	case *ast.PrintStatement:
 		if n.Expression == nil {
 			fmt.Println("null")
@@ -812,8 +834,16 @@ func (e *Evaluator) evalFunctionCall(n *ast.FunctionCall) Value {
 	if !ok {
 		return e.newError(n.Position, ErrNotAFunction,
 			"'%s' is not a function", function.Type())
-
 	}
+
+	// Handle built-in functions
+	if isFunction.IsBuiltin {
+		e.pushFrame(isFunction.Name, n.Position, "builtin")
+		defer e.popFrame()
+		return isFunction.BuiltinFn(results)
+	}
+
+	// Handle user-defined functions
 	e.pushFrame(isFunction.Name, n.Position, "call")
 	defer e.popFrame()
 
@@ -850,6 +880,20 @@ func (e *Evaluator) evalFunctionCall(n *ast.FunctionCall) Value {
 
 	// If no explicit return, return NULL
 	return NULL
+}
+
+func (e *Evaluator) evalArrayLiteral(n *ast.ArrayLiteral) Value {
+	elements := make([]Value, 0, len(n.Elements))
+
+	for _, element := range n.Elements {
+		evaluated := e.Eval(element)
+		if isError(evaluated) {
+			return evaluated
+		}
+		elements = append(elements, evaluated)
+	}
+
+	return &ArrayValue{Elements: elements}
 }
 
 func getValueType(v Value) string {
@@ -892,6 +936,8 @@ func formatValueForOutput(value Value) string {
 		return "null"
 	case *FunctionValue:
 		return fmt.Sprintf("%s", v.Name)
+	case *ArrayValue:
+		return v.String()
 	case *RuntimeError:
 		return fmt.Sprintf("ERROR: %s", v.Detail.Message)
 	default:

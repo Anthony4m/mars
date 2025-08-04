@@ -85,13 +85,23 @@ go vet ./...
 
 ### Contributing
 
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for detailed information on:
+
+- Development setup and environment
+- Coding standards and guidelines
+- Testing requirements
+- Contribution workflow
+- Current development priorities
+- How to report issues and request features
+
+Quick start:
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
+For questions or help, please open an issue or start a discussion.
 
 ## License
 
@@ -127,7 +137,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - ✅ **Control Flow**: `if`/`else`, `for` loops, `break`/`continue`
 - ✅ **Functions**: Declaration, parameters, return types, closures
 - ✅ **Function Calls**: User-defined function execution
-- ✅ **Built-in Functions**: `log()` for output
+- ✅ **Built-in Functions**: `log()`, `len()`, `append()`, `print()`, `println()`, `printf()`, `sin()`, `cos()`, `sqrt()`, `now()`
 - ✅ **Block Statements**: Nested scopes and variable shadowing
 - ✅ **Type System**: Basic type checking and compatibility
 - ✅ **Struct Declarations**: Type definitions with fields
@@ -149,7 +159,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [ ] **Transpiler**: AST to Go code generation
 - [ ] **Runtime**: GC and unsafe memory management
-- [ ] **Standard Library**: Built-in functions beyond `log()`
+- [ ] **Standard Library**: Additional built-in functions and modules
 - [ ] **Package System**: Module imports and dependencies
 - [ ] **Concurrency Support**: Goroutines and channels
 - [ ] **Build System Integration**: Dependency management
@@ -159,7 +169,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Current Limitations
 
 - **No Code Generation**: Currently only evaluates, doesn't generate Go code
-- **Limited Built-ins**: Only `log()` function implemented
+- **Limited Built-ins**: Basic built-in functions implemented, more needed
 - **No Arrays/Structs Runtime**: Types are parsed but not evaluated
 - **No CLI Compiler**: Only test runner available
 - **No Package System**: Single file execution only

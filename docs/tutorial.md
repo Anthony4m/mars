@@ -213,20 +213,57 @@ unsafe {
 
 ### Output Functions
 
-#### `log(value)`
+#### `log(value)`, `print(value)`, `println(value)`, `printf(format, ...)`
 
-The primary output function in Mars:
+Output functions in Mars:
 
 ```mars
 log("Hello, World!");           // String output
+print("No newline");            // Print without newline
+println("With newline");        // Print with newline
+printf("Value: %s", "test");    // Formatted printing
+
 log(42);                        // Integer output
 log(3.14);                      // Float output
 log(true);                      // Boolean output
 log(add(5, 3));                 // Function result output
+```
 
-// Multiple log statements
-log("The answer is:");
-log(42);
+### Array Functions
+
+#### `len(value)`, `append(array, value)`
+
+Array manipulation functions:
+
+```mars
+let arr := [1, 2, 3];
+let length := len(arr);         // Get array length
+let newArr := append(arr, 4);   // Append to array
+
+let str := "hello";
+let strLen := len(str);         // Get string length
+```
+
+### Math Functions
+
+#### `sin(angle)`, `cos(angle)`, `sqrt(value)`
+
+Mathematical functions (angles in radians):
+
+```mars
+let sine := sin(0);             // Sine of 0
+let cosine := cos(0);           // Cosine of 0
+let root := sqrt(16);           // Square root of 16
+```
+
+### Utility Functions
+
+#### `now()`
+
+Get current time:
+
+```mars
+let currentTime := now();       // Current time as string
 ```
 
 **Available**: ✅ **Fully implemented**
@@ -367,7 +404,7 @@ func safeDiv(a: int, b: int) -> Result {
 - [ ] Package system and imports
 - [ ] Code generation to Go
 - [ ] Concurrency support
-- [ ] More built-in functions
+- ✅ Built-in functions (log, print, len, append, math, time)
 
 ## Testing Your Code
 
@@ -387,3 +424,13 @@ go run cmd/test_errors/main.go your_program.mars
 2. **Experiment with functions** and control flow
 3. **Check the test suite** in `evaluator/evaluator_test.go` for more examples
 4. **Contribute** to implement missing features like array/struct runtime support
+
+### Want to Contribute?
+
+If you're interested in contributing to Mars, check out our [Contributing Guide](../CONTRIBUTING.md) for:
+
+- Development setup instructions
+- Coding standards and guidelines
+- Current development priorities
+- How to submit pull requests
+- Good first issues for beginners

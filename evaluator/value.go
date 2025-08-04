@@ -19,6 +19,7 @@ const (
 	FLOAT_TYPE    = "FLOAT"
 	BREAK_TYPE    = "BREAK"
 	CONTINUE_TYPE = "CONTINUE"
+	ARRAY_TYPE    = "ARRAY"
 )
 
 // Value interface - all runtime values implement this
@@ -109,6 +110,8 @@ type FunctionValue struct {
 	ReturnType *ast.Type
 	Env        *Environment // For closure support
 	Position   ast.Position
+	IsBuiltin  bool                     // True if this is a built-in function
+	BuiltinFn  func(args []Value) Value // Built-in function implementation
 }
 
 func (fv *FunctionValue) String() string {
@@ -133,6 +136,21 @@ func (fv *FunctionValue) Type() string {
 func (fv *FunctionValue) IsTruthy() bool {
 	return true
 }
+
+// ArrayValue represents array values
+type ArrayValue struct {
+	Elements []Value
+}
+
+func (a *ArrayValue) Type() string { return ARRAY_TYPE }
+func (a *ArrayValue) String() string {
+	var elements []string
+	for _, elem := range a.Elements {
+		elements = append(elements, elem.String())
+	}
+	return "[" + strings.Join(elements, ", ") + "]"
+}
+func (a *ArrayValue) IsTruthy() bool { return len(a.Elements) > 0 }
 
 func (i *BreakValue) Type() string   { return BREAK_TYPE }
 func (i *BreakValue) String() string { return fmt.Sprintf("%d", i.Value) }
