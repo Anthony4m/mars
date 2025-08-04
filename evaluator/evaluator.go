@@ -345,7 +345,7 @@ func New() *Evaluator {
 		  - Investigate and potentially implement NaN-boxing for more efficient value representation in `evaluator/value.go` if performance becomes a critical concern. This is a complex optimization and should be approached carefully.
 */
 func (e *Evaluator) Eval(node ast.Node) Value {
-	fmt.Printf("Evaluating: %T\n", node)
+	//fmt.Printf("Evaluating: %T\n", node)
 	switch n := node.(type) {
 	case *ast.Program:
 		e.pushFrame("main", n.Position, "program")
@@ -448,6 +448,21 @@ func (e *Evaluator) Eval(node ast.Node) Value {
 		return e.evalFunctionDecl(n)
 	case *ast.FunctionCall:
 		return e.evalFunctionCall(n)
+	case *ast.PrintStatement:
+		if n.Expression == nil {
+			fmt.Println("null")
+			return NULL
+		}
+
+		// Evaluate the expression to print
+		value := e.Eval(n.Expression)
+		if isError(value) {
+			return value
+		}
+
+		// Print the value
+		fmt.Println(formatValueForOutput(value))
+		return NULL
 	case ast.Expression:
 		return e.Eval(n.(ast.Node))
 	default:
@@ -861,4 +876,25 @@ func isError(obj Value) bool {
 
 func newError(format string, args ...interface{}) *Error {
 	return &Error{Message: fmt.Sprintf(format, args...)}
+}
+
+func formatValueForOutput(value Value) string {
+	switch v := value.(type) {
+	case *StringValue:
+		return v.Value // Don't add quotes for log output
+	case *IntegerValue:
+		return fmt.Sprintf("%d", v.Value)
+	case *FloatValue:
+		return fmt.Sprintf("%g", v.Value)
+	case *BooleanValue:
+		return fmt.Sprintf("%t", v.Value)
+	case *NullValue:
+		return "null"
+	case *FunctionValue:
+		return fmt.Sprintf("%s", v.Name)
+	case *RuntimeError:
+		return fmt.Sprintf("ERROR: %s", v.Detail.Message)
+	default:
+		return value.String()
+	}
 }

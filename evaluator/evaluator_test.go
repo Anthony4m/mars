@@ -1,7 +1,10 @@
 package evaluator
 
 import (
+	"bytes"
+	"io"
 	"mars/ast"
+	"os"
 	"strings"
 	"testing"
 )
@@ -3025,6 +3028,685 @@ func TestFuncCall(t *testing.T) {
 			} else if result != nil && result.Type() != "" {
 				// Expecting empty result (void function)
 				t.Errorf("[%s] Expected empty result but got %s", tc.name, result.Type())
+			}
+		})
+	}
+}
+
+func TestLogStatement(t *testing.T) {
+	tests := []struct {
+		name           string
+		input          ast.Node
+		expectedOutput string
+		shouldError    bool
+	}{
+		{
+			name: "log integer literal",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: &ast.Literal{
+							Token:    "42",
+							Value:    int64(42),
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedOutput: "42",
+			shouldError:    false,
+		},
+		{
+			name: "log string literal",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: &ast.Literal{
+							Token:    "hello",
+							Value:    "hello world",
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedOutput: "hello world",
+			shouldError:    false,
+		},
+		{
+			name: "log boolean true",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: &ast.Literal{
+							Token:    "true",
+							Value:    true,
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedOutput: "true",
+			shouldError:    false,
+		},
+		{
+			name: "log boolean false",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: &ast.Literal{
+							Token:    "false",
+							Value:    false,
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedOutput: "false",
+			shouldError:    false,
+		},
+		{
+			name: "log float",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: &ast.Literal{
+							Token:    "3.14",
+							Value:    3.14,
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedOutput: "3.14",
+			shouldError:    false,
+		},
+		{
+			name: "log arithmetic expression",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: &ast.BinaryExpression{
+							Left: &ast.Literal{
+								Token:    "5",
+								Value:    int64(5),
+								Position: ast.Position{Line: 1, Column: 1},
+							},
+							Operator: "+",
+							Right: &ast.Literal{
+								Token:    "3",
+								Value:    int64(3),
+								Position: ast.Position{Line: 1, Column: 5},
+							},
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedOutput: "8",
+			shouldError:    false,
+		},
+		{
+			name: "log comparison expression",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: &ast.BinaryExpression{
+							Left: &ast.Literal{
+								Token:    "10",
+								Value:    int64(10),
+								Position: ast.Position{Line: 1, Column: 1},
+							},
+							Operator: ">",
+							Right: &ast.Literal{
+								Token:    "5",
+								Value:    int64(5),
+								Position: ast.Position{Line: 1, Column: 6},
+							},
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedOutput: "true",
+			shouldError:    false,
+		},
+		{
+			name: "log variable",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.VarDecl{
+						Name: &ast.Identifier{Name: "x"},
+						Value: &ast.Literal{
+							Token:    "100",
+							Value:    int64(100),
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+					&ast.PrintStatement{
+						Expression: &ast.Identifier{
+							Name:     "x",
+							Position: ast.Position{Line: 2, Column: 1},
+						},
+						Position: ast.Position{Line: 2, Column: 1},
+					},
+				},
+			},
+			expectedOutput: "100",
+			shouldError:    false,
+		},
+		{
+			name: "log string concatenation",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: &ast.BinaryExpression{
+							Left: &ast.Literal{
+								Token:    "Hello",
+								Value:    "Hello",
+								Position: ast.Position{Line: 1, Column: 1},
+							},
+							Operator: "+",
+							Right: &ast.Literal{
+								Token:    " World",
+								Value:    " World",
+								Position: ast.Position{Line: 1, Column: 9},
+							},
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedOutput: "Hello World",
+			shouldError:    false,
+		},
+		{
+			name: "log with nil expression",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: nil,
+						Position:   ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedOutput: "null",
+			shouldError:    false,
+		},
+		{
+			name: "log undefined variable (should error)",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: &ast.Identifier{
+							Name:     "undefined_var",
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedOutput: "", // No output because error occurs
+			shouldError:    true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			eval := New()
+
+			// Capture stdout to test what gets printed
+			output := captureStdout(func() {
+				result := eval.Eval(tc.input)
+
+				if tc.shouldError {
+					// Should return an error
+					if !isError(result) {
+						t.Errorf("Expected error but got %T: %v", result, result)
+					}
+				} else {
+					// Should return NULL (void return from log)
+					if isError(result) {
+						t.Errorf("Unexpected error: %v", result)
+					} else if result != NULL {
+						t.Errorf("Expected NULL return from log(), got %T: %v", result, result)
+					}
+				}
+			})
+
+			if !tc.shouldError {
+				// Check that the correct value was printed
+				if strings.TrimSpace(output) != tc.expectedOutput {
+					t.Errorf("Expected output %q, got %q", tc.expectedOutput, strings.TrimSpace(output))
+				}
+			}
+		})
+	}
+}
+
+// Helper function to capture stdout during test execution
+func captureStdout(f func()) string {
+	// Create a pipe to capture stdout
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	// Execute the function
+	f()
+
+	// Restore stdout and read captured output
+	w.Close()
+	os.Stdout = oldStdout
+
+	output, _ := io.ReadAll(r)
+	return string(output)
+}
+
+// Test specifically for multiple log statements
+func TestMultipleLogStatements(t *testing.T) {
+	input := &ast.Program{
+		Declarations: []ast.Declaration{
+			&ast.PrintStatement{
+				Expression: &ast.Literal{Value: "First"},
+				Position:   ast.Position{Line: 1, Column: 1},
+			},
+			&ast.PrintStatement{
+				Expression: &ast.Literal{Value: "Second"},
+				Position:   ast.Position{Line: 2, Column: 1},
+			},
+			&ast.PrintStatement{
+				Expression: &ast.Literal{Value: int64(42)},
+				Position:   ast.Position{Line: 3, Column: 1},
+			},
+		},
+	}
+
+	eval := New()
+
+	output := captureStdout(func() {
+		result := eval.Eval(input)
+		if isError(result) {
+			t.Errorf("Unexpected error: %v", result)
+		}
+	})
+
+	expectedLines := []string{"First", "Second", "42"}
+	actualLines := strings.Split(strings.TrimSpace(output), "\n")
+
+	if len(actualLines) != len(expectedLines) {
+		t.Errorf("Expected %d lines, got %d", len(expectedLines), len(actualLines))
+	}
+
+	for i, expected := range expectedLines {
+		if i < len(actualLines) && strings.TrimSpace(actualLines[i]) != expected {
+			t.Errorf("Line %d: expected %q, got %q", i+1, expected, strings.TrimSpace(actualLines[i]))
+		}
+	}
+}
+
+func TestPrintStatement(t *testing.T) {
+	tests := []struct {
+		name            string
+		input           ast.Node
+		expectedMessage string
+		expectedOutput  string
+	}{
+		{
+			name: "PrintStringLiteral",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: &ast.Literal{
+							Token:    "hello",
+							Value:    "hello world",
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "",
+			expectedOutput:  "hello world\n",
+		},
+		{
+			name: "PrintIntegerLiteral",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: &ast.Literal{
+							Token:    "42",
+							Value:    int64(42),
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "",
+			expectedOutput:  "42\n",
+		},
+		{
+			name: "PrintFloatLiteral",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: &ast.Literal{
+							Token:    "3.14",
+							Value:    3.14,
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "",
+			expectedOutput:  "3.14\n",
+		},
+		{
+			name: "PrintBooleanTrue",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: &ast.Literal{
+							Token:    BOOLEAN_TYPE,
+							Value:    true,
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "",
+			expectedOutput:  "true\n",
+		},
+		{
+			name: "PrintBooleanFalse",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: &ast.Literal{
+							Token:    BOOLEAN_TYPE,
+							Value:    false,
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "",
+			expectedOutput:  "false\n",
+		},
+		{
+			name: "PrintNullValue",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: nil,
+						Position:   ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "",
+			expectedOutput:  "null\n",
+		},
+		{
+			name: "PrintVariable",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.VarDecl{
+						Name: &ast.Identifier{Name: "x"},
+						Value: &ast.Literal{
+							Token:    "100",
+							Value:    int64(100),
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Mutable:  true,
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+					&ast.PrintStatement{
+						Expression: &ast.Identifier{Name: "x"},
+						Position:   ast.Position{Line: 2, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "",
+			expectedOutput:  "100\n",
+		},
+		{
+			name: "PrintExpression",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: &ast.BinaryExpression{
+							Left: &ast.Literal{
+								Token:    "10",
+								Value:    int64(10),
+								Position: ast.Position{Line: 1, Column: 1},
+							},
+							Operator: "+",
+							Right: &ast.Literal{
+								Token:    "20",
+								Value:    int64(20),
+								Position: ast.Position{Line: 1, Column: 1},
+							},
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "",
+			expectedOutput:  "30\n",
+		},
+		{
+			name: "PrintStringWithQuotes",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: &ast.Literal{
+							Token:    `"quoted string"`,
+							Value:    "quoted string",
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "",
+			expectedOutput:  "quoted string\n",
+		},
+		{
+			name: "PrintFunctionValue",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.FuncDecl{
+						Name: &ast.Identifier{Name: "testFunc"},
+						Signature: &ast.FunctionSignature{
+							Parameters: []*ast.Parameter{},
+							ReturnType: &ast.Type{BaseType: INTEGER_TYPE},
+							Position:   ast.Position{Line: 1, Column: 1},
+						},
+						Body: &ast.BlockStatement{
+							Statements: []ast.Statement{
+								&ast.ReturnStatement{
+									Value:    &ast.Literal{Token: "1", Value: int64(1)},
+									Position: ast.Position{Line: 2, Column: 9},
+								},
+							},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+					&ast.PrintStatement{
+						Expression: &ast.Identifier{Name: "testFunc"},
+						Position:   ast.Position{Line: 4, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "",
+			expectedOutput:  "testFunc\n",
+		},
+		{
+			name: "PrintWithErrorInExpression",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: &ast.BinaryExpression{
+							Left: &ast.Literal{
+								Token:    "10",
+								Value:    int64(10),
+								Position: ast.Position{Line: 1, Column: 1},
+							},
+							Operator: "/",
+							Right: &ast.Literal{
+								Token:    "0",
+								Value:    int64(0),
+								Position: ast.Position{Line: 1, Column: 1},
+							},
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "division by zero",
+			expectedOutput:  "",
+		},
+		{
+			name: "MultiplePrintStatements",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: &ast.Literal{
+							Token:    "first",
+							Value:    "first",
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+					&ast.PrintStatement{
+						Expression: &ast.Literal{
+							Token:    "second",
+							Value:    "second",
+							Position: ast.Position{Line: 2, Column: 1},
+						},
+						Position: ast.Position{Line: 2, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "",
+			expectedOutput:  "first\nsecond\n",
+		},
+		{
+			name: "PrintInBlockStatement",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.BlockStatement{
+						Statements: []ast.Statement{
+							&ast.PrintStatement{
+								Expression: &ast.Literal{
+									Token:    "block print",
+									Value:    "block print",
+									Position: ast.Position{Line: 1, Column: 5},
+								},
+								Position: ast.Position{Line: 1, Column: 1},
+							},
+						},
+					},
+				},
+			},
+			expectedMessage: "",
+			expectedOutput:  "block print\n",
+		},
+		{
+			name: "PrintWithUnaryExpression",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: &ast.UnaryExpression{
+							Operator: "-",
+							Right: &ast.Literal{
+								Token:    "5",
+								Value:    int64(5),
+								Position: ast.Position{Line: 1, Column: 1},
+							},
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "",
+			expectedOutput:  "-5\n",
+		},
+		{
+			name: "PrintEmptyString",
+			input: &ast.Program{
+				Declarations: []ast.Declaration{
+					&ast.PrintStatement{
+						Expression: &ast.Literal{
+							Token:    "",
+							Value:    "",
+							Position: ast.Position{Line: 1, Column: 1},
+						},
+						Position: ast.Position{Line: 1, Column: 1},
+					},
+				},
+			},
+			expectedMessage: "",
+			expectedOutput:  "\n",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Capture stdout
+			old := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+
+			eval := New()
+			result := eval.Eval(tc.input)
+
+			// Restore stdout
+			w.Close()
+			os.Stdout = old
+
+			// Read captured output
+			var buf bytes.Buffer
+			io.Copy(&buf, r)
+			output := buf.String()
+
+			// Check if we're expecting an error message
+			if tc.expectedMessage != "" {
+				// Expecting an error
+				if result == nil {
+					t.Fatalf("[%s] Expected error but got nil result", tc.name)
+				}
+				if !strings.Contains(result.String(), tc.expectedMessage) {
+					t.Errorf("[%s] Expected error containing '%s' but got '%s'",
+						tc.name, tc.expectedMessage, result.String())
+				}
+			} else {
+				// Expecting successful execution (NULL return)
+				if result == nil {
+					t.Fatalf("[%s] Expected NULL result but got nil", tc.name)
+				}
+				if result.Type() != "" && result.Type() != "NULL" {
+					t.Errorf("[%s] Expected NULL but got %s", tc.name, result.Type())
+				}
+
+				// Check output
+				if output != tc.expectedOutput {
+					t.Errorf("[%s] Expected output '%s' but got '%s'", tc.name, tc.expectedOutput, output)
+				}
 			}
 		})
 	}
