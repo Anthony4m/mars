@@ -2,9 +2,9 @@
 
 This document tracks the implementation progress of the Mars programming language compiler.
 
-## Overall Status: **Solid Foundation** 🟢
+## Overall Status: **Feature-Rich Language** 🟢
 
-Mars has a **complete and working foundation** with all core language features implemented and tested. The language can execute basic programs with variables, functions, control flow, and output.
+Mars has evolved into a **comprehensive programming language** with extensive built-in functionality. The language now supports advanced features including string/array operations, comprehensive math functions, type checking, and a rich standard library of 25+ built-in functions.
 
 ## Implementation Progress
 
@@ -27,7 +27,15 @@ Mars has a **complete and working foundation** with all core language features i
 - ✅ **Control Flow**: `if`/`else`, `for` loops, `break`/`continue`
 - ✅ **Functions**: Declaration, parameters, return types, closures
 - ✅ **Function Calls**: User-defined function execution
-- ✅ **Built-in Functions**: `log()` for output
+- ✅ **Built-in Functions**: Comprehensive library of 25+ functions including:
+  - Output: `log()`, `print()`, `println()`, `printf()`
+  - Type conversion: `toInt()`, `toFloat()`, `toString()`, `getType()`
+  - Type checking: `isInt()`, `isFloat()`, `isString()`, `isArray()`, `isBool()`
+  - Array operations: `len()`, `append()`, `push()`, `pop()`, `reverse()`, `join()`
+  - Math: `sin()`, `cos()`, `sqrt()`, `pow()`, `floor()`, `ceil()`, `abs()`, `min()`, `max()`
+  - Time: `now()`
+- ✅ **String and Array Operations**: Indexing, slicing, assignment
+- ✅ **Comments**: Single-line (`//`) and multi-line (`/* */`)
 - ✅ **Block Statements**: Nested scopes and variable shadowing
 - ✅ **Struct Declarations**: Type definitions with fields
 - ✅ **Array Types**: Fixed-size and dynamic arrays
@@ -43,17 +51,14 @@ Mars has a **complete and working foundation** with all core language features i
 ### 🔄 **IN PROGRESS** (Partially Working)
 
 #### **Runtime Evaluation**
-- 🔄 **Array Literals**: Parsed but not evaluated
 - 🔄 **Struct Literals**: Parsed but not evaluated
-- 🔄 **Array Indexing**: Parsed but not evaluated
 - 🔄 **Member Access**: Parsed but not evaluated
 - 🔄 **Unsafe Block Execution**: Parsed but not evaluated
 
-#### **Built-in Functions**
-- 🔄 **Standard Library**: Only `log()` implemented
-- 🔄 **Array Functions**: `len()`, `append()`, etc. planned
-- 🔄 **String Functions**: `len()`, `substring()`, etc. planned
-- 🔄 **Math Functions**: `abs()`, `min()`, `max()`, etc. planned
+#### **Advanced Built-in Functions**
+- 🔄 **String Functions**: `substring()`, `indexOf()`, `split()`, `toLowerCase()`, `toUpperCase()`, `trim()`, `replace()`, `contains()`
+- 🔄 **File I/O**: `readFile()`, `writeFile()`, `exists()`
+- 🔄 **Compound Assignments**: `+=`, `-=`, `*=`, `/=`
 
 ### 📋 **PLANNED** (Not Started)
 
@@ -118,26 +123,65 @@ for i := 0; i < 5; i = i + 1 {
     log(i);
 }
 
-// Function calls
-result := add(5, 3);
-log(result);
+// Comments
+// This is a single-line comment
+/* This is a multi-line comment */
 
-// Complex expressions
-total := (5 + 3) * 2;
-log(total);
+// Built-in functions (25+ functions)
+log("Hello, World!");
+print("No newline");
+println("With newline");
+printf("Value: %s", "test");
+
+// Type conversion and checking
+let num := toInt("42");
+let str := toString(42);
+let isInt := isInt(42);
+let type := getType("hello");
+
+// Array operations
+let arr := [1, 2, 3];
+let length := len(arr);
+push(arr, 4);
+let popped := pop(arr);
+reverse(arr);
+let joined := join(arr, ", ");
+
+// Math functions
+let power := pow(2, 3);
+let floor := floor(3.7);
+let ceiling := ceil(3.2);
+let absolute := abs(-5);
+let minimum := min(3, 7);
+let maximum := max(3, 7);
+
+// String and array slicing
+let str := "Hello, Mars!";
+let slice1 := str[0:5];        // "Hello"
+let slice2 := str[:5];         // "Hello"
+let slice3 := str[7:];         // "Mars!"
+let slice4 := str[-6:-1];      // "Mars"
+
+let arr := [1, 2, 3, 4, 5];
+let arrSlice1 := arr[1:4];     // [2, 3, 4]
+let arrSlice2 := arr[:3];      // [1, 2, 3]
+
+// String and array indexing
+let char := str[0];            // "H"
+let elem := arr[2];            // 3
+
+// Array assignment
+arr[0] = 10;
+
+// Time function
+let currentTime := now();
 ```
 
 ### **What's Parsed but Not Evaluated** 🔄
 
 ```mars
-// Array literals (parsed, not evaluated)
-numbers := [1, 2, 3, 4, 5];
-
 // Struct literals (parsed, not evaluated)
 point := Point{x: 1, y: 2};
-
-// Array indexing (parsed, not evaluated)
-first := numbers[0];
 
 // Member access (parsed, not evaluated)
 x := point.x;
@@ -223,8 +267,8 @@ We welcome contributions! Please see our [Contributing Guide](../CONTRIBUTING.md
 
 ## Conclusion
 
-Mars has achieved a **solid foundation** with all core language features working correctly. The lexer, parser, analyzer, and evaluator are complete and well-tested. The language can execute basic programs with variables, functions, control flow, and output.
+Mars has evolved into a **comprehensive programming language** with extensive built-in functionality. The language now supports advanced features including string/array operations, comprehensive math functions, type checking, and a rich standard library of 25+ built-in functions.
 
-The next major milestone is implementing array/struct runtime support and building the transpiler to generate Go code. This will transform Mars from an interpreted language to a compiled language that can integrate with the Go ecosystem.
+The next major milestones are implementing advanced string functions, file I/O capabilities, and building the transpiler to generate Go code. This will transform Mars from an interpreted language to a compiled language that can integrate with the Go ecosystem.
 
-**Current Status**: Ready for production use of core features, with clear roadmap for advanced features. 
+**Current Status**: Feature-rich programming language ready for real-world tasks with comprehensive built-in library. 

@@ -362,6 +362,170 @@ func safeDiv(a: int, b: int) -> Result {
 }
 ```
 
+## Advanced Features
+
+### Built-in Functions
+
+Mars comes with a comprehensive set of built-in functions:
+
+#### Type Conversion and Checking
+
+```mars
+// Type conversion
+let num := toInt("42");        // String to int
+let float := toFloat("3.14");  // String to float
+let str := toString(42);       // Any value to string
+let type := getType("hello");  // Get type as string
+
+// Type checking
+let isInt := isInt(42);        // true
+let isFloat := isFloat(3.14);  // true
+let isString := isString("hello"); // true
+let isArray := isArray([1, 2, 3]); // true
+let isBool := isBool(true);    // true
+```
+
+#### Array Operations
+
+```mars
+let arr := [1, 2, 3];
+
+// Basic operations
+let length := len(arr);        // Get array length
+let newArr := append(arr, 4);  // Create new array with element
+
+// Advanced operations
+push(arr, 5);                  // Add element to end (modifies array)
+let popped := pop(arr);        // Remove and return last element
+reverse(arr);                  // Reverse array in place
+let joined := join(arr, ", "); // Join elements with separator
+```
+
+#### Math Functions
+
+```mars
+// Basic math
+let power := pow(2, 3);        // 2^3 = 8
+let floor := floor(3.7);       // 3.7 → 3
+let ceiling := ceil(3.2);      // 3.2 → 4
+let absolute := abs(-5);       // |-5| = 5
+let minimum := min(3, 7);      // 3
+let maximum := max(3, 7);      // 7
+
+// Trigonometry
+let sine := sin(0);            // 0
+let cosine := cos(0);          // 1
+let root := sqrt(16);          // 4
+```
+
+#### Output Functions
+
+```mars
+log("Hello, World!");          // Print with newline
+print("No newline");           // Print without newline
+println("With newline");       // Print with newline
+printf("Value: %s", "test");   // Formatted printing
+```
+
+### String and Array Slicing
+
+Mars supports Python-style slicing for both strings and arrays:
+
+```mars
+let str := "Hello, Mars!";
+
+// String slicing
+let slice1 := str[0:5];        // "Hello"
+let slice2 := str[:5];         // "Hello" (from start)
+let slice3 := str[7:];         // "Mars!" (to end)
+let slice4 := str[-6:-1];      // "Mars" (negative indices)
+
+let arr := [1, 2, 3, 4, 5];
+
+// Array slicing
+let arrSlice1 := arr[1:4];     // [2, 3, 4]
+let arrSlice2 := arr[:3];      // [1, 2, 3]
+let arrSlice3 := arr[2:];      // [3, 4, 5]
+let arrSlice4 := arr[-3:-1];   // [3, 4]
+```
+
+### String and Array Indexing
+
+```mars
+let str := "Hello, Mars!";
+let char := str[0];            // "H" (first character)
+
+let arr := [1, 2, 3, 4, 5];
+let elem := arr[2];            // 3 (third element)
+
+// Array assignment
+arr[0] = 10;                   // Modify array element
+```
+
+### Comments
+
+Mars supports both single-line and multi-line comments:
+
+```mars
+// This is a single-line comment
+x := 42; // Another single-line comment
+
+/* This is a multi-line comment
+   that spans multiple lines */
+
+y := 10; /* Inline block comment */
+
+/* Nested /* block */ comments work too */
+```
+
+### Practical Examples
+
+#### Working with Arrays
+
+```mars
+func processArray(arr: []int) {
+    // Add elements
+    push(arr, 100);
+    push(arr, 200);
+    
+    // Reverse the array
+    reverse(arr);
+    
+    // Join elements for display
+    let display := join(arr, " → ");
+    log("Array: " + display);
+    
+    // Check types
+    log("Is array: " + toString(isArray(arr)));
+    log("Length: " + toString(len(arr)));
+}
+
+// Usage
+let numbers := [1, 2, 3];
+processArray(numbers);
+```
+
+#### Type-Safe Operations
+
+```mars
+func safeOperation(value) {
+    if isInt(value) {
+        log("Processing integer: " + toString(value));
+    } else if isString(value) {
+        log("Processing string: " + value);
+    } else if isArray(value) {
+        log("Processing array with " + toString(len(value)) + " elements");
+    } else {
+        log("Unknown type: " + getType(value));
+    }
+}
+
+// Test with different types
+safeOperation(42);
+safeOperation("hello");
+safeOperation([1, 2, 3]);
+```
+
 ## Language Features Summary
 
 ### ✅ **Supported and Working:**
@@ -375,7 +539,7 @@ func safeDiv(a: int, b: int) -> Result {
 - ✅ `struct Name { field: type; }`
 - ✅ `if condition { ... } else { ... }`
 - ✅ `for init; condition; post { ... }`
-- ✅ `log(expression)` (built-in output function)
+- ✅ Comments: `//` and `/* */`
 - ✅ `unsafe { ... }` (parsing only)
 
 **Operations:**
@@ -390,21 +554,33 @@ func safeDiv(a: int, b: int) -> Result {
 - ✅ Pointer types: `*Type`
 - ✅ Struct types: `struct Name`
 
+**Built-in Functions (25+ functions):**
+- ✅ Output: `log()`, `print()`, `println()`, `printf()`
+- ✅ Type conversion: `toInt()`, `toFloat()`, `toString()`, `getType()`
+- ✅ Type checking: `isInt()`, `isFloat()`, `isString()`, `isArray()`, `isBool()`
+- ✅ Array operations: `len()`, `append()`, `push()`, `pop()`, `reverse()`, `join()`
+- ✅ Math: `sin()`, `cos()`, `sqrt()`, `pow()`, `floor()`, `ceil()`, `abs()`, `min()`, `max()`
+- ✅ Time: `now()`
+
+**String and Array Operations:**
+- ✅ Indexing: `str[0]`, `arr[2]`
+- ✅ Slicing: `str[0:5]`, `str[:5]`, `str[7:]`, `str[-6:-1]`
+- ✅ Assignment: `arr[0] = 10`
+
 ### 🔄 **Parsed but Not Yet Evaluated:**
 
-- 🔄 `array[index]` and `array[start:end]` (array indexing)
 - 🔄 `obj.field` (member access)
-- 🔄 Array literals: `[1, 2, 3]`
 - 🔄 Struct literals: `Point{x: 1, y: 2}`
 - 🔄 Unsafe block operations
 
 ### 📋 **Planned Features:**
 
-- [ ] Standard library functions (`len()`, `append()`, etc.)
+- [ ] String functions (`substring`, `indexOf`, `split`, `toLowerCase`, etc.)
+- [ ] File I/O (`readFile`, `writeFile`, `exists`)
+- [ ] Compound assignments (`+=`, `-=`, `*=`, `/=`)
 - [ ] Package system and imports
 - [ ] Code generation to Go
 - [ ] Concurrency support
-- ✅ Built-in functions (log, print, len, append, math, time)
 
 ## Testing Your Code
 

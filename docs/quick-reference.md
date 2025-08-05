@@ -312,18 +312,61 @@ print("No newline");    // ✅ Working
 println("With newline"); // ✅ Working
 printf("Value: %s", "test"); // ✅ Working
 
+// Type conversion functions
+let num := toInt("42");     // ✅ Working
+let float := toFloat("3.14"); // ✅ Working
+let str := toString(42);    // ✅ Working
+let type := getType("hello"); // ✅ Working
+
+// Type checking functions
+let isInt := isInt(42);     // ✅ Working
+let isFloat := isFloat(3.14); // ✅ Working
+let isString := isString("hello"); // ✅ Working
+let isArray := isArray([1, 2, 3]); // ✅ Working
+let isBool := isBool(true); // ✅ Working
+
 // Array functions
 let arr := [1, 2, 3];
 let length := len(arr);     // ✅ Working
 let newArr := append(arr, 4); // ✅ Working
+push(arr, 5);              // ✅ Working
+let popped := pop(arr);     // ✅ Working
+reverse(arr);              // ✅ Working
+let joined := join(arr, ", "); // ✅ Working
 
 // Math functions
 let sine := sin(0);         // ✅ Working
 let cosine := cos(0);       // ✅ Working
 let root := sqrt(16);       // ✅ Working
+let power := pow(2, 3);     // ✅ Working (2^3 = 8)
+let floor := floor(3.7);    // ✅ Working (3.7 → 3)
+let ceiling := ceil(3.2);   // ✅ Working (3.2 → 4)
+let absolute := abs(-5);    // ✅ Working
+let minimum := min(3, 7);   // ✅ Working
+let maximum := max(3, 7);   // ✅ Working
 
 // Time function
 let currentTime := now();   // ✅ Working
+
+// String and array slicing
+let str := "Hello, Mars!";
+let slice1 := str[0:5];     // ✅ Working ("Hello")
+let slice2 := str[:5];      // ✅ Working ("Hello")
+let slice3 := str[7:];      // ✅ Working ("Mars!")
+let slice4 := str[-6:-1];   // ✅ Working ("Mars")
+
+let arr := [1, 2, 3, 4, 5];
+let arrSlice1 := arr[1:4];  // ✅ Working ([2, 3, 4])
+let arrSlice2 := arr[:3];   // ✅ Working ([1, 2, 3])
+let arrSlice3 := arr[2:];   // ✅ Working ([3, 4, 5])
+let arrSlice4 := arr[-3:-1]; // ✅ Working ([3, 4])
+
+// String indexing
+let char := str[0];         // ✅ Working ("H")
+let arrElem := arr[2];      // ✅ Working (3)
+
+// Array assignment
+arr[0] = 10;               // ✅ Working
 ```
 
 ## Testing Your Code
@@ -380,9 +423,17 @@ If you're interested in contributing to Mars, check out our [Contributing Guide]
 
 - ✅ **Core Language**: Variables, functions, control flow, operators
 - ✅ **Runtime**: AST evaluation, environment management, error handling
-- ✅ **Built-ins**: `log()`, `print()`, `len()`, `append()`, `sin()`, `cos()`, `sqrt()`, `now()` functions
+- ✅ **Built-ins**: Comprehensive set of 25+ functions including:
+  - Output: `log()`, `print()`, `println()`, `printf()`
+  - Type conversion: `toInt()`, `toFloat()`, `toString()`, `getType()`
+  - Type checking: `isInt()`, `isFloat()`, `isString()`, `isArray()`, `isBool()`
+  - Array operations: `len()`, `append()`, `push()`, `pop()`, `reverse()`, `join()`
+  - Math: `sin()`, `cos()`, `sqrt()`, `pow()`, `floor()`, `ceil()`, `abs()`, `min()`, `max()`
+  - Time: `now()`
+- ✅ **String & Array Operations**: Indexing, slicing, assignment
+- ✅ **Comments**: Single-line (`//`) and multi-line (`/* */`)
 - 🔄 **Data Structures**: Parsed but not evaluated
 - 🔄 **Advanced Features**: Unsafe blocks, member access
 - 📋 **Tooling**: CLI compiler, REPL, code generation
 
-**Current Status**: Ready for basic programming tasks with clear roadmap for advanced features. 
+**Current Status**: Feature-rich programming language ready for real-world tasks with comprehensive built-in library. 
