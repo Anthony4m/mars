@@ -67,6 +67,15 @@ type AssignmentStatement struct {
 	Position Position
 }
 
+// !!!!!!!!!!!!!!!!!!!!!!!!!!
+// IndexAssignmentStatement represents array element assignment
+type IndexAssignmentStatement struct {
+	Object   Expression // The array/string being indexed
+	Index    Expression // The index expression
+	Value    Expression // The value to assign
+	Position Position
+}
+
 // FuncDecl represents a function declaration
 type FuncDecl struct {
 	Name      *Identifier
@@ -266,93 +275,97 @@ func (p *Program) TokenLiteral() string {
 	}
 	return ""
 }
-func (vd *VarDecl) TokenLiteral() string             { return vd.Name.TokenLiteral() }
-func (as *AssignmentStatement) TokenLiteral() string { return "=" }
-func (fd *FuncDecl) TokenLiteral() string            { return fd.Name.TokenLiteral() }
-func (sd *StructDecl) TokenLiteral() string          { return sd.Name.TokenLiteral() }
-func (ub *UnsafeBlock) TokenLiteral() string         { return "unsafe" }
-func (bs *BlockStatement) TokenLiteral() string      { return "{" }
-func (is *IfStatement) TokenLiteral() string         { return "if" }
-func (fs *ForStatement) TokenLiteral() string        { return "for" }
-func (ps *PrintStatement) TokenLiteral() string      { return "log" }
-func (rs *ReturnStatement) TokenLiteral() string     { return "return" }
-func (es *ExpressionStatement) TokenLiteral() string { return es.Expression.TokenLiteral() }
-func (i *Identifier) TokenLiteral() string           { return i.Name }
-func (al *ArrayLiteral) TokenLiteral() string        { return "[" }
-func (sl *StructLiteral) TokenLiteral() string       { return sl.Type.TokenLiteral() }
-func (fc *FunctionCall) TokenLiteral() string        { return fc.Function.TokenLiteral() }
-func (be *BinaryExpression) TokenLiteral() string    { return be.Operator }
-func (ue *UnaryExpression) TokenLiteral() string     { return ue.Operator }
-func (l *Literal) TokenLiteral() string              { return l.Token }
-func (me *MemberExpression) TokenLiteral() string    { return me.Object.TokenLiteral() }
-func (bs *BreakStatement) TokenLiteral() string      { return "break" }
-func (cs *ContinueStatement) TokenLiteral() string   { return "continue" }
-func (ie *IndexExpression) TokenLiteral() string     { return "[" }
-func (se *SliceExpression) TokenLiteral() string     { return "[" }
-func (ml *MapLiteral) TokenLiteral() string          { return "map" }
+func (vd *VarDecl) TokenLiteral() string                   { return vd.Name.TokenLiteral() }
+func (as *AssignmentStatement) TokenLiteral() string       { return "=" }
+func (ias *IndexAssignmentStatement) TokenLiteral() string { return "=" }
+func (fd *FuncDecl) TokenLiteral() string                  { return fd.Name.TokenLiteral() }
+func (sd *StructDecl) TokenLiteral() string                { return sd.Name.TokenLiteral() }
+func (ub *UnsafeBlock) TokenLiteral() string               { return "unsafe" }
+func (bs *BlockStatement) TokenLiteral() string            { return "{" }
+func (is *IfStatement) TokenLiteral() string               { return "if" }
+func (fs *ForStatement) TokenLiteral() string              { return "for" }
+func (ps *PrintStatement) TokenLiteral() string            { return "log" }
+func (rs *ReturnStatement) TokenLiteral() string           { return "return" }
+func (es *ExpressionStatement) TokenLiteral() string       { return es.Expression.TokenLiteral() }
+func (i *Identifier) TokenLiteral() string                 { return i.Name }
+func (al *ArrayLiteral) TokenLiteral() string              { return "[" }
+func (sl *StructLiteral) TokenLiteral() string             { return sl.Type.TokenLiteral() }
+func (fc *FunctionCall) TokenLiteral() string              { return fc.Function.TokenLiteral() }
+func (be *BinaryExpression) TokenLiteral() string          { return be.Operator }
+func (ue *UnaryExpression) TokenLiteral() string           { return ue.Operator }
+func (l *Literal) TokenLiteral() string                    { return l.Token }
+func (me *MemberExpression) TokenLiteral() string          { return me.Object.TokenLiteral() }
+func (bs *BreakStatement) TokenLiteral() string            { return "break" }
+func (cs *ContinueStatement) TokenLiteral() string         { return "continue" }
+func (ie *IndexExpression) TokenLiteral() string           { return "[" }
+func (se *SliceExpression) TokenLiteral() string           { return "[" }
+func (ml *MapLiteral) TokenLiteral() string                { return "map" }
 
 // Position implementations
-func (p *Program) Pos() Position              { return p.Position }
-func (vd *VarDecl) Pos() Position             { return vd.Position }
-func (as *AssignmentStatement) Pos() Position { return as.Position }
-func (fd *FuncDecl) Pos() Position            { return fd.Position }
-func (sd *StructDecl) Pos() Position          { return sd.Position }
-func (ub *UnsafeBlock) Pos() Position         { return ub.Position }
-func (bs *BlockStatement) Pos() Position      { return bs.Position }
-func (is *IfStatement) Pos() Position         { return is.Position }
-func (fs *ForStatement) Pos() Position        { return fs.Position }
-func (ps *PrintStatement) Pos() Position      { return ps.Position }
-func (rs *ReturnStatement) Pos() Position     { return rs.Position }
-func (es *ExpressionStatement) Pos() Position { return es.Position }
-func (i *Identifier) Pos() Position           { return i.Position }
-func (al *ArrayLiteral) Pos() Position        { return al.Position }
-func (sl *StructLiteral) Pos() Position       { return sl.Position }
-func (fc *FunctionCall) Pos() Position        { return fc.Position }
-func (be *BinaryExpression) Pos() Position    { return be.Position }
-func (ue *UnaryExpression) Pos() Position     { return ue.Position }
-func (l *Literal) Pos() Position              { return l.Position }
-func (me *MemberExpression) Pos() Position    { return me.Position }
-func (bs *BreakStatement) Pos() Position      { return bs.Position }
-func (cs *ContinueStatement) Pos() Position   { return cs.Position }
-func (ie *IndexExpression) Pos() Position     { return ie.Position }
-func (se *SliceExpression) Pos() Position     { return se.Position }
-func (ml *MapLiteral) Pos() Position          { return ml.Position }
+func (p *Program) Pos() Position                    { return p.Position }
+func (vd *VarDecl) Pos() Position                   { return vd.Position }
+func (as *AssignmentStatement) Pos() Position       { return as.Position }
+func (ias *IndexAssignmentStatement) Pos() Position { return ias.Position }
+func (fd *FuncDecl) Pos() Position                  { return fd.Position }
+func (sd *StructDecl) Pos() Position                { return sd.Position }
+func (ub *UnsafeBlock) Pos() Position               { return ub.Position }
+func (bs *BlockStatement) Pos() Position            { return bs.Position }
+func (is *IfStatement) Pos() Position               { return is.Position }
+func (fs *ForStatement) Pos() Position              { return fs.Position }
+func (ps *PrintStatement) Pos() Position            { return ps.Position }
+func (rs *ReturnStatement) Pos() Position           { return rs.Position }
+func (es *ExpressionStatement) Pos() Position       { return es.Position }
+func (i *Identifier) Pos() Position                 { return i.Position }
+func (al *ArrayLiteral) Pos() Position              { return al.Position }
+func (sl *StructLiteral) Pos() Position             { return sl.Position }
+func (fc *FunctionCall) Pos() Position              { return fc.Position }
+func (be *BinaryExpression) Pos() Position          { return be.Position }
+func (ue *UnaryExpression) Pos() Position           { return ue.Position }
+func (l *Literal) Pos() Position                    { return l.Position }
+func (me *MemberExpression) Pos() Position          { return me.Position }
+func (bs *BreakStatement) Pos() Position            { return bs.Position }
+func (cs *ContinueStatement) Pos() Position         { return cs.Position }
+func (ie *IndexExpression) Pos() Position           { return ie.Position }
+func (se *SliceExpression) Pos() Position           { return se.Position }
+func (ml *MapLiteral) Pos() Position                { return ml.Position }
 
 // Node type implementations
-func (vd *VarDecl) declarationNode()             {}
-func (vd *VarDecl) statementNode()               {}
-func (as *AssignmentStatement) statementNode()   {}
-func (as *AssignmentStatement) declarationNode() {}
-func (fd *FuncDecl) declarationNode()            {}
-func (sd *StructDecl) declarationNode()          {}
-func (ub *UnsafeBlock) declarationNode()         {}
-func (bs *BlockStatement) statementNode()        {}
-func (bs *BlockStatement) declarationNode()      {}
-func (is *IfStatement) statementNode()           {}
-func (is *IfStatement) declarationNode()         {}
-func (fs *ForStatement) statementNode()          {}
-func (fs *ForStatement) declarationNode()        {}
-func (ps *PrintStatement) statementNode()        {}
-func (ps *PrintStatement) declarationNode()      {}
-func (rs *ReturnStatement) statementNode()       {}
-func (rs *ReturnStatement) declarationNode()     {}
-func (es *ExpressionStatement) statementNode()   {}
-func (es *ExpressionStatement) declarationNode() {}
-func (i *Identifier) expressionNode()            {}
-func (al *ArrayLiteral) expressionNode()         {}
-func (sl *StructLiteral) expressionNode()        {}
-func (fc *FunctionCall) expressionNode()         {}
-func (be *BinaryExpression) expressionNode()     {}
-func (ue *UnaryExpression) expressionNode()      {}
-func (l *Literal) expressionNode()               {}
-func (me *MemberExpression) expressionNode()     {}
-func (bs *BreakStatement) statementNode()        {}
-func (bs *BreakStatement) declarationNode()      {}
-func (cs *ContinueStatement) statementNode()     {}
-func (cs *ContinueStatement) declarationNode()   {}
-func (ie *IndexExpression) expressionNode()      {}
-func (se *SliceExpression) expressionNode()      {}
-func (ml *MapLiteral) expressionNode()           {}
+func (vd *VarDecl) declarationNode()                   {}
+func (vd *VarDecl) statementNode()                     {}
+func (as *AssignmentStatement) statementNode()         {}
+func (as *AssignmentStatement) declarationNode()       {}
+func (ias *IndexAssignmentStatement) statementNode()   {}
+func (ias *IndexAssignmentStatement) declarationNode() {}
+func (fd *FuncDecl) declarationNode()                  {}
+func (sd *StructDecl) declarationNode()                {}
+func (ub *UnsafeBlock) declarationNode()               {}
+func (bs *BlockStatement) statementNode()              {}
+func (bs *BlockStatement) declarationNode()            {}
+func (is *IfStatement) statementNode()                 {}
+func (is *IfStatement) declarationNode()               {}
+func (fs *ForStatement) statementNode()                {}
+func (fs *ForStatement) declarationNode()              {}
+func (ps *PrintStatement) statementNode()              {}
+func (ps *PrintStatement) declarationNode()            {}
+func (rs *ReturnStatement) statementNode()             {}
+func (rs *ReturnStatement) declarationNode()           {}
+func (es *ExpressionStatement) statementNode()         {}
+func (es *ExpressionStatement) declarationNode()       {}
+func (i *Identifier) expressionNode()                  {}
+func (al *ArrayLiteral) expressionNode()               {}
+func (sl *StructLiteral) expressionNode()              {}
+func (fc *FunctionCall) expressionNode()               {}
+func (be *BinaryExpression) expressionNode()           {}
+func (ue *UnaryExpression) expressionNode()            {}
+func (l *Literal) expressionNode()                     {}
+func (me *MemberExpression) expressionNode()           {}
+func (bs *BreakStatement) statementNode()              {}
+func (bs *BreakStatement) declarationNode()            {}
+func (cs *ContinueStatement) statementNode()           {}
+func (cs *ContinueStatement) declarationNode()         {}
+func (ie *IndexExpression) expressionNode()            {}
+func (se *SliceExpression) expressionNode()            {}
+func (ml *MapLiteral) expressionNode()                 {}
 
 // method to check if type is a slice vs fixed array
 func (t *Type) IsSlice() bool {
@@ -472,6 +485,11 @@ func (vd *VarDecl) String() string {
 
 func (as *AssignmentStatement) String() string {
 	return as.Name.Name + " = " + as.Value.String() + ";"
+}
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!
+func (ias *IndexAssignmentStatement) String() string {
+	return ias.Object.String() + "[" + ias.Index.String() + "] = " + ias.Value.String() + ";"
 }
 
 func (fd *FuncDecl) String() string {

@@ -166,6 +166,12 @@ func (l *Lexer) NextToken() Token {
 			tok.Type = COMMENT
 			tok.Literal = l.readBlockComment()
 			return tok
+		} else if l.peekChar() == '/' {
+			//!!!!!!!!!!!!!!!!!!!!!!!!!!
+			//!!!!!!!!!!!!!!!!!!!!!!!!!!
+			tok.Type = COMMENT
+			tok.Literal = l.readLineComment()
+			return tok
 		}
 		tok.Type = SLASH
 		tok.Literal = string(l.ch)
@@ -360,6 +366,22 @@ func (l *Lexer) readBlockComment() string {
 			}
 			l.readChar()
 		}
+	}
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!
+	return l.input[position:l.position]
+}
+
+// readLineComment reads a single-line comment // ...
+func (l *Lexer) readLineComment() string {
+	position := l.position
+
+	// Skip the opening //
+	l.readChar() // Skip '/'
+	l.readChar() // Skip '/'
+
+	// Read until end of line or EOF
+	for l.ch != '\n' && l.ch != 0 {
+		l.readChar()
 	}
 
 	return l.input[position:l.position]

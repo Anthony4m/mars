@@ -164,6 +164,11 @@ func (p *parser) parseStructTypeReference() *ast.Type {
 
 func (p *parser) parseDeclaration() ast.Declaration {
 	switch p.curToken.Type {
+	//!!!!!!!!!!!!!!!!!!!!!!!!!!
+	case lexer.COMMENT:
+		// Skip comments by consuming the token and returning nil
+		p.nextToken()
+		return nil
 	case lexer.FUNC:
 		return p.parseFunctionDeclaration()
 	case lexer.MUT:
@@ -433,34 +438,73 @@ func (p *parser) parseUnsafeDeclaration() ast.Declaration {
 	}
 }
 
-// parseAssignment handles: IDENT "=" Expression ";"
+// parseAssignment handles: IDENT "=" Expression ";" or IDENT "[" Expression "]" "=" Expression ";"
 func (p *parser) parseAssignment() ast.Declaration {
 	if !p.curTokenIs(lexer.IDENT) {
 		p.recordSyntaxError("expected identifier in assignment")
 		return nil
 	}
 
-	assignment := &ast.AssignmentStatement{
-		Name: &ast.Identifier{
-			Name:     p.curToken.Literal,
-			Position: p.currentPosition(),
-		},
-		Position: p.currentPosition(),
-	}
-	p.nextToken() // consume identifier
+	// Parse the left-hand side (could be identifier or indexed expression)
+	startPos := p.currentPosition()
+	object := p.parseIdentifierOrStructLiteral()
 
+	// Check if this is an array assignment (object[index] = value)
+	if p.curTokenIs(lexer.LBRACKET) {
+		// This is an array assignment: arr[index] = value
+		p.nextToken() // consume "["
+
+		index := p.parseExpression()
+
+		if !p.expectCurrent(lexer.RBRACKET) {
+			return nil
+		}
+
+		if !p.expectCurrent(lexer.EQ) {
+			p.recordSyntaxError("expected '=' after array index")
+			return nil
+		}
+		//!!!!!!!!!!!!!!!!!!!!!!!!!!
+		value := p.parseExpression()
+
+		// Optional semicolon
+		if p.curTokenIs(lexer.SEMICOLON) {
+			p.nextToken()
+		}
+
+		return &ast.IndexAssignmentStatement{
+			Object:   object,
+			Index:    index,
+			Value:    value,
+			Position: startPos,
+		}
+	}
+
+	// This is a regular assignment: identifier = value
 	if !p.expectCurrent(lexer.EQ) {
 		return nil
 	}
 
-	assignment.Value = p.parseExpression()
+	value := p.parseExpression()
 
 	// Optional semicolon
 	if p.curTokenIs(lexer.SEMICOLON) {
 		p.nextToken()
 	}
 
-	return assignment
+	//!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+	// Convert object back to identifier for regular assignment
+	if ident, ok := object.(*ast.Identifier); ok {
+		return &ast.AssignmentStatement{
+			Name:     ident,
+			Value:    value,
+			Position: startPos,
+		}
+	}
+
+	p.recordSyntaxError("expected identifier for assignment")
+	return nil
 }
 
 // TODO: Implement these
@@ -733,9 +777,34 @@ func (p *parser) parseIndexOrSliceExpression(object ast.Expression) ast.Expressi
 	startPos := p.currentPosition()
 	p.nextToken() // consume "["
 
+	//!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// Check if it's slicing (has colon immediately or after start expression)
+	if p.curTokenIs(lexer.COLON) {
+		// Handle [:end] case
+		p.nextToken() // consume ":"
+
+		var endExpr ast.Expression
+		if !p.curTokenIs(lexer.RBRACKET) {
+			endExpr = p.parseExpression()
+		}
+
+		if !p.expectCurrent(lexer.RBRACKET) {
+			return nil
+		}
+
+		// Create SliceExpression with nil start
+		return &ast.SliceExpression{
+			Object:   object,
+			Start:    nil,
+			End:      endExpr,
+			Position: startPos,
+		}
+	}
+
+	// Parse start expression
 	startExpr := p.parseExpression()
 
-	// Check if it's slicing (has colon)
+	// Check if it's slicing (has colon after start expression)
 	if p.curTokenIs(lexer.COLON) {
 		p.nextToken() // consume ":"
 
@@ -1141,8 +1210,46 @@ func (p *parser) parseContinueStatement() ast.Statement {
 
 func (p *parser) parseExpressionStatement() ast.Statement {
 	startPos := p.currentPosition()
+	//!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// Parse the left-hand side of what might be an assignment
+	leftExpr := p.parseExpression()
+
+	// Check if this is an assignment (leftExpr = rightExpr)
+	if p.curTokenIs(lexer.EQ) {
+		p.nextToken() // consume "="
+		rightExpr := p.parseExpression()
+
+		// Optional semicolon
+		if p.curTokenIs(lexer.SEMICOLON) {
+			p.nextToken()
+		}
+
+		// Check if leftExpr is an IndexExpression (array assignment)
+		if indexExpr, ok := leftExpr.(*ast.IndexExpression); ok {
+			return &ast.IndexAssignmentStatement{
+				Object:   indexExpr.Object,
+				Index:    indexExpr.Index,
+				Value:    rightExpr,
+				Position: startPos,
+			}
+		}
+
+		// Check if leftExpr is an Identifier (regular assignment)
+		if ident, ok := leftExpr.(*ast.Identifier); ok {
+			return &ast.AssignmentStatement{
+				Name:     ident,
+				Value:    rightExpr,
+				Position: startPos,
+			}
+		}
+
+		// For other types, treat as regular expression statement
+		// (the assignment will be part of the expression)
+	}
+
+	// Regular expression statement
 	stmt := &ast.ExpressionStatement{
-		Expression: p.parseExpression(),
+		Expression: leftExpr,
 		Position:   startPos,
 	}
 

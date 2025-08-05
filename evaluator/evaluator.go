@@ -446,6 +446,9 @@ func (e *Evaluator) Eval(node ast.Node) Value {
 		return e.EvalVariableDecl(n)
 	case *ast.AssignmentStatement:
 		return e.EvalAssignment(n)
+		// LOOK HERE !!!!!!!!!!!!!!!!!!!!!!!!!!
+	case *ast.IndexAssignmentStatement:
+		return e.EvalIndexAssignment(n)
 	case *ast.IfStatement:
 		return e.EvalConditional(n)
 	case *ast.ForStatement:
@@ -470,6 +473,11 @@ func (e *Evaluator) Eval(node ast.Node) Value {
 		return e.evalFunctionCall(n)
 	case *ast.ArrayLiteral:
 		return e.evalArrayLiteral(n)
+		// start from here !!!!!!!!!!!!!!!!!!!!!!!!!!
+	case *ast.IndexExpression:
+		return e.evalIndexExpression(n)
+	case *ast.SliceExpression:
+		return e.evalSliceExpression(n)
 	case *ast.PrintStatement:
 		if n.Expression == nil {
 			fmt.Println("null")
@@ -659,6 +667,74 @@ func (e *Evaluator) EvalAssignment(n *ast.AssignmentStatement) Value {
 	}
 
 	return value
+}
+
+// For Index Assignment (arr[0] = 42) !!!!!!!!!!!!!!!!!!!!!!!!!!
+func (e *Evaluator) EvalIndexAssignment(n *ast.IndexAssignmentStatement) Value {
+	// Validate AST structure
+	if n.Object == nil {
+		return e.newError(n.Position, ErrSyntaxError, "index assignment missing object")
+	}
+
+	if n.Index == nil {
+		return e.newError(n.Position, ErrSyntaxError, "index assignment missing index")
+	}
+
+	if n.Value == nil {
+		return e.newError(n.Position, ErrSyntaxError, "index assignment missing value")
+	}
+
+	// Evaluate the object being indexed
+	object := e.Eval(n.Object)
+	if isError(object) {
+		return object
+	}
+
+	// Evaluate the index
+	index := e.Eval(n.Index)
+	if isError(index) {
+		return index
+	}
+
+	// Evaluate the value to be assigned
+	value := e.Eval(n.Value)
+	if isError(value) {
+		return value
+	}
+
+	// Check if index is an integer
+	if index.Type() != INTEGER_TYPE {
+		return e.newError(n.Position, ErrTypeMismatch, "array index must be integer, got %s", index.Type())
+	}
+
+	indexValue := index.(*IntegerValue).Value
+
+	// Handle array assignment
+	if object.Type() == ARRAY_TYPE {
+		array := object.(*ArrayValue)
+		if indexValue < 0 || indexValue >= int64(len(array.Elements)) {
+			return e.newError(n.Position, ErrRuntimeError, "index out of bounds: %d", indexValue)
+		}
+
+		// Check type compatibility
+		elementType := getValueType(array.Elements[indexValue])
+		valueType := getValueType(value)
+		if elementType != valueType {
+			return e.newError(n.Position, ErrTypeMismatch,
+				"type mismatch: cannot assign %s to array element of type %s", valueType, elementType)
+		}
+
+		// Perform the assignment
+		array.Elements[indexValue] = value
+		return value
+	}
+
+	// Handle string assignment (if we want to support it)
+	if object.Type() == STRING_TYPE {
+		return e.newError(n.Position, ErrRuntimeError, "cannot assign to string elements (strings are immutable)")
+	}
+
+	return e.newError(n.Position, ErrTypeMismatch, "cannot assign to index of type %s", object.Type())
 }
 
 func (e *Evaluator) initializeToZero(t *ast.Type) Value {
@@ -920,6 +996,164 @@ func isError(obj Value) bool {
 
 func newError(format string, args ...interface{}) *Error {
 	return &Error{Message: fmt.Sprintf(format, args...)}
+}
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!
+func (e *Evaluator) evalIndexExpression(n *ast.IndexExpression) Value {
+	// Evaluate the object being indexed
+	object := e.Eval(n.Object)
+	if isError(object) {
+		return object
+	}
+
+	// Evaluate the index
+	index := e.Eval(n.Index)
+	if isError(index) {
+		return index
+	}
+
+	// Check if index is an integer
+	if index.Type() != INTEGER_TYPE {
+		return e.newError(n.Position, ErrTypeMismatch, "array index must be integer, got %s", index.Type())
+	}
+
+	indexValue := index.(*IntegerValue).Value
+
+	// Handle array indexing
+	if object.Type() == ARRAY_TYPE {
+		array := object.(*ArrayValue)
+		if indexValue < 0 || indexValue >= int64(len(array.Elements)) {
+			return e.newError(n.Position, ErrRuntimeError, "index out of bounds: %d", indexValue)
+		}
+		return array.Elements[indexValue]
+	}
+
+	// Handle string indexing
+	if object.Type() == STRING_TYPE {
+		str := object.(*StringValue).Value
+		if indexValue < 0 || indexValue >= int64(len(str)) {
+			return e.newError(n.Position, ErrRuntimeError, "index out of bounds: %d", indexValue)
+		}
+		// Return a single character as a string
+		return &StringValue{Value: string(str[indexValue])}
+	}
+
+	return e.newError(n.Position, ErrTypeMismatch, "cannot index type %s", object.Type())
+}
+
+func (e *Evaluator) evalSliceExpression(n *ast.SliceExpression) Value {
+	// Evaluate the object being sliced
+	object := e.Eval(n.Object)
+	if isError(object) {
+		return object
+	}
+
+	// Evaluate start index (can be nil for [:end])
+	var startIndex int64 = 0
+	if n.Start != nil {
+		start := e.Eval(n.Start)
+		if isError(start) {
+			return start
+		}
+		if start.Type() != INTEGER_TYPE {
+			return e.newError(n.Position, ErrTypeMismatch, "slice start index must be integer, got %s", start.Type())
+		}
+		startIndex = start.(*IntegerValue).Value
+	}
+
+	// Evaluate end index (can be nil for [start:])
+	var endIndex int64
+	if n.End != nil {
+		end := e.Eval(n.End)
+		if isError(end) {
+			return end
+		}
+		if end.Type() != INTEGER_TYPE {
+			return e.newError(n.Position, ErrTypeMismatch, "slice end index must be integer, got %s", end.Type())
+		}
+		endIndex = end.(*IntegerValue).Value
+	}
+
+	// Handle string slicing
+	if object.Type() == STRING_TYPE {
+		str := object.(*StringValue).Value
+		strLen := int64(len(str))
+
+		// Handle negative indices (Python-style)
+		if startIndex < 0 {
+			startIndex = strLen + startIndex
+		}
+		if n.End != nil && endIndex < 0 {
+			endIndex = strLen + endIndex
+		}
+
+		// Bounds checking
+		if startIndex < 0 {
+			startIndex = 0
+		}
+		if startIndex > strLen {
+			startIndex = strLen
+		}
+		if n.End != nil {
+			if endIndex < 0 {
+				endIndex = 0
+			}
+			if endIndex > strLen {
+				endIndex = strLen
+			}
+			if startIndex > endIndex {
+				startIndex = endIndex
+			}
+		} else {
+			endIndex = strLen
+		}
+
+		return &StringValue{Value: str[startIndex:endIndex]}
+	}
+
+	// Handle array slicing
+	if object.Type() == ARRAY_TYPE {
+		array := object.(*ArrayValue)
+		arrayLen := int64(len(array.Elements))
+
+		// Handle negative indices (Python-style)
+		if startIndex < 0 {
+			startIndex = arrayLen + startIndex
+		}
+		if n.End != nil && endIndex < 0 {
+			endIndex = arrayLen + endIndex
+		}
+
+		// Bounds checking
+		if startIndex < 0 {
+			startIndex = 0
+		}
+		if startIndex > arrayLen {
+			startIndex = arrayLen
+		}
+		if n.End != nil {
+			if endIndex < 0 {
+				endIndex = 0
+			}
+			if endIndex > arrayLen {
+				endIndex = arrayLen
+			}
+			if startIndex > endIndex {
+				startIndex = endIndex
+			}
+		} else {
+			endIndex = arrayLen
+		}
+
+		// Create new array with sliced elements
+		slicedElements := make([]Value, 0, endIndex-startIndex)
+		for i := startIndex; i < endIndex; i++ {
+			slicedElements = append(slicedElements, array.Elements[i])
+		}
+		return &ArrayValue{Elements: slicedElements}
+	}
+
+	return e.newError(n.Position, ErrTypeMismatch, "cannot slice type %s", object.Type())
 }
 
 func formatValueForOutput(value Value) string {
