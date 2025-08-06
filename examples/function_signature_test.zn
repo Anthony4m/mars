@@ -1,0 +1,29 @@
+// Test file for function signature capture
+
+func add(a : int, b : int) -> int {
+    return a + b;
+}
+
+func greet(name : string) -> string {
+    return "Hello, " + name;
+}
+
+func process(data : []int, callback : func(int) -> bool) -> int {
+    count := 0;
+    for i := 0; i < len(data); i = i + 1 {
+        if callback(data[i]) {
+            count = count + 1;
+        }
+    }
+    return count;
+}
+
+// Function with no return type
+func log(message : string) {
+    // Implementation would go here
+}
+
+// Function with no parameters
+func getCurrentTime() -> int {
+    return 1234567890;
+} 
