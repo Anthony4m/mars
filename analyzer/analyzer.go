@@ -377,7 +377,7 @@ func (a *Analyzer) collectUnsafeBlock(block *ast.UnsafeBlock) error {
 		return fmt.Errorf("unsafe block must have a body")
 	}
 
-	// ✅ Traverse INTO the unsafe block to find declarations
+	//Traverse INTO the unsafe block to find declarations
 	return a.collectDeclarations(block.Body)
 
 	// Note: We don't create any symbol for the unsafe block itself
@@ -672,12 +672,12 @@ func (a *Analyzer) CheckTypes(node ast.Node) error {
 		defer func() { a.inUnsafeContext = prevUnsafeState }()
 		// Check all statements in a block
 		return a.CheckTypes(n.Body)
-		// Example: If you had a new AST node for pointer dereference
-	//case *ast.PointerDereferencing: // Assuming you add this AST node later
+		// Example: If I had a new AST node for pointer dereference
+	//case *ast.PointerDereferencing: // Assuming I add this AST node later
 	//	if !a.isInUnsafeBlock {
 	//		a.errors.AddErrorWithHelp(
 	//			n.Position,
-	//			errors.ErrCodeUnsafeOperation, // You might need a new error code
+	//			errors.ErrCodeUnsafeOperation, // I might need a new error code
 	//			"pointer dereference is only allowed inside an 'unsafe' block",
 	//			"wrap this operation in an 'unsafe { ... }' block",
 	//		)
