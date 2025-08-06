@@ -167,8 +167,6 @@ func (l *Lexer) NextToken() Token {
 			tok.Literal = l.readBlockComment()
 			return tok
 		} else if l.peekChar() == '/' {
-			//!!!!!!!!!!!!!!!!!!!!!!!!!!
-			//!!!!!!!!!!!!!!!!!!!!!!!!!!
 			tok.Type = COMMENT
 			tok.Literal = l.readLineComment()
 			return tok
@@ -336,7 +334,7 @@ func isDigit(ch rune) bool {
 // readBlockComment reads a block comment /* ... */
 func (l *Lexer) readBlockComment() string {
 	position := l.position
-	nestLevel := 1 // Start with nesting level 1 for the initial /*
+	nestLevel := 1
 
 	// Skip the opening /*
 	l.readChar() // Skip '/'
@@ -367,7 +365,6 @@ func (l *Lexer) readBlockComment() string {
 			l.readChar()
 		}
 	}
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!
 	return l.input[position:l.position]
 }
 
