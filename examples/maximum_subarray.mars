@@ -1,0 +1,54 @@
+func max_subarray(nums : []int) -> int {
+    if len(nums) == 0 {
+        return 0;
+    }
+    
+    mut max_current := nums[0];
+    mut max_global := nums[0];
+    
+    for i := 1; i < len(nums); i = i + 1 {
+        // Either extend the previous subarray or start a new one
+        if nums[i] > max_current + nums[i] {
+            max_current = nums[i];
+        } else {
+            max_current = max_current + nums[i];
+        }
+        
+        // Update global maximum
+        if max_current > max_global {
+            max_global = max_current;
+        }
+    }
+    
+    return max_global;
+}
+
+func main() {
+    // Test case 1: [-2,1,-3,4,-1,2,1,-5,4]
+    result1 := max_subarray([-2, 1, -3, 4, -1, 2, 1, -5, 4]);
+    println("Test 1: [-2,1,-3,4,-1,2,1,-5,4]");
+    println("Expected: 6 (subarray [4,-1,2,1])");
+    println("Result:");
+    println(result1);
+    
+    // Test case 2: [1]
+    result2 := max_subarray([1]);
+    println("Test 2: [1]");
+    println("Expected: 1");
+    println("Result:");
+    println(result2);
+    
+    // Test case 3: [5,4,-1,7,8]
+    result3 := max_subarray([5, 4, -1, 7, 8]);
+    println("Test 3: [5,4,-1,7,8]");
+    println("Expected: 23");
+    println("Result:");
+    println(result3);
+    
+    // Test case 4: All negative numbers
+    result4 := max_subarray([-1, -2, -3, -4]);
+    println("Test 4: [-1,-2,-3,-4]");
+    println("Expected: -1");
+    println("Result:");
+    println(result4);
+} 

@@ -1,0 +1,57 @@
+func longest_valid_parentheses(s : string) -> int {
+    // Use a stack-based approach with array to simulate stack
+    mut stack := [-1]; // Start with -1 to handle edge cases
+    mut max_length := 0;
+    
+    for i := 0; i < len(s); i = i + 1 {
+        if s[i] == '(' {
+            // Push current index onto stack
+            stack = stack + [i];
+        } else {
+            // Pop from stack
+            if len(stack) > 1 {
+                stack = stack[0:len(stack)-1]; // Remove last element
+                // Calculate length: current index - top of stack
+                current_length := i - stack[len(stack)-1];
+                if current_length > max_length {
+                    max_length = current_length;
+                }
+            } else {
+                // Invalid closing parenthesis, reset stack
+                stack = [i];
+            }
+        }
+    }
+    
+    return max_length;
+}
+
+func main() {
+    // Test case 1: "(()"
+    result1 := longest_valid_parentheses("(()");
+    println("Test 1: \"(()\"");
+    println("Expected: 2");
+    println("Result:");
+    println(result1);
+    
+    // Test case 2: ")()())"
+    result2 := longest_valid_parentheses(")()())");
+    println("Test 2: \")()())\"");
+    println("Expected: 4");
+    println("Result:");
+    println(result2);
+    
+    // Test case 3: ""
+    result3 := longest_valid_parentheses("");
+    println("Test 3: \"\"");
+    println("Expected: 0");
+    println("Result:");
+    println(result3);
+    
+    // Test case 4: "((()))"
+    result4 := longest_valid_parentheses("((()))");
+    println("Test 4: \"((()))\"");
+    println("Expected: 6");
+    println("Result:");
+    println(result4);
+} 

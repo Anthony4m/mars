@@ -1,0 +1,66 @@
+// Simplified regex matching for patterns like "a*", ".*", "a", etc.
+// This is a basic implementation that handles the core cases
+
+func is_match(s : string, p : string) -> bool {
+    // Handle empty cases
+    if len(p) == 0 {
+        return len(s) == 0;
+    }
+    
+    if len(s) == 0 {
+        // Pattern must be like "a*", "b*", ".*" etc.
+        if len(p) >= 2 && p[1] == '*' {
+            return is_match(s, p[2:len(p)]);
+        }
+        return false;
+    }
+    
+    // Check if first characters match
+    first_match := (len(s) > 0) && (p[0] == s[0] || p[0] == '.');
+    
+    // If pattern has '*', handle repetition
+    if len(p) >= 2 && p[1] == '*' {
+        // Either skip the pattern (0 occurrences) or use it (1+ occurrences)
+        return is_match(s, p[2:len(p)]) || (first_match && is_match(s[1:len(s)], p));
+    } else {
+        // No '*', just match one character
+        return first_match && is_match(s[1:len(s)], p[1:len(p)]);
+    }
+}
+
+func main() {
+    // Test case 1: s = "aa", p = "a"
+    result1 := is_match("aa", "a");
+    println("Test 1: s=\"aa\", p=\"a\"");
+    println("Expected: false");
+    println("Result:");
+    println(result1);
+    
+    // Test case 2: s = "aa", p = "a*"
+    result2 := is_match("aa", "a*");
+    println("Test 2: s=\"aa\", p=\"a*\"");
+    println("Expected: true");
+    println("Result:");
+    println(result2);
+    
+    // Test case 3: s = "ab", p = ".*"
+    result3 := is_match("ab", ".*");
+    println("Test 3: s=\"ab\", p=\".*\"");
+    println("Expected: true");
+    println("Result:");
+    println(result3);
+    
+    // Test case 4: s = "aab", p = "c*a*b"
+    result4 := is_match("aab", "c*a*b");
+    println("Test 4: s=\"aab\", p=\"c*a*b\"");
+    println("Expected: true");
+    println("Result:");
+    println(result4);
+    
+    // Test case 5: s = "mississippi", p = "mis*is*p*."
+    result5 := is_match("mississippi", "mis*is*p*.");
+    println("Test 5: s=\"mississippi\", p=\"mis*is*p*.\"");
+    println("Expected: false");
+    println("Result:");
+    println(result5);
+} 
