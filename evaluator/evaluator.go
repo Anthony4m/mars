@@ -319,51 +319,27 @@ func (e *Evaluator) typeMismatchError(pos ast.Position, op string, left, right V
 func New() *Evaluator {
 	evaluator := &Evaluator{env: NewEnvironment()}
 
-	// Register built-in functions
+	// Register builtin functions
 	for name, builtin := range BuiltinFunctions {
-		// Create a FunctionValue for the built-in function
+		// Create a FunctionValue for the builtin function
 		function := &FunctionValue{
 			Name:       name,
-			Parameters: []*ast.Parameter{}, // Built-ins handle their own parameter validation
-			Body:       nil,                // Built-ins don't have AST bodies
-			ReturnType: nil,                // Built-ins can return different types
+			Parameters: []*ast.Parameter{}, // Builtins handle their own parameter validation
+			Body:       nil,                // Builtins don't have AST bodies
+			ReturnType: nil,                // Builtins can return different types
 			Env:        evaluator.env,
 			Position:   ast.Position{Line: 0, Column: 0},
 			IsBuiltin:  true,
 			BuiltinFn:  builtin.Function,
 		}
 
-		// Store the built-in function in the environment
+		// Store the builtin function in the environment
 		evaluator.env.Set(name, function, false)
 	}
 
 	return evaluator
 }
 
-/*
-			TODO: 1. **Variable Declaration**
-		  - When you see a `let` or `var` statement, you must bind the new name into the *current* environment.
-		  - 2. **Identifier Lookup**
-		  - Whenever you evaluate an `Identifier` node, you must call `env.Get(name)` to fetch its current value (or signal an undefined-name error).
-		  - 3. **Assignment / Mutation**
-		  - On an assignment expression (`x = expr`), first evaluate the right-hand side, then use `env.Update(name, newValue)` (or `Set` if you allow shadowing) to change the binding in the correct scope.
-		  - 4. **Function Literal (Closure) Creation**
-		  - When you evaluate a function literal, you capture the *current* environment in the closure object so that when the function later runs, it still “sees” those outer variables.
-		  - 5. **Function Call**
-		  - Just before executing a function body, you create a **new enclosed environment** whose `outer` points at the function’s defining (closure) environment.
-		  - You then bind the call’s parameters in that new environment and evaluate the body there.
-		  - 6. **Block / Nested Scope**
-		  - If your language has explicit block scopes (e.g. `{ … }` inside a function), you would push a fresh environment at block entry and pop it at exit so that temporaries don’t leak out.
-		  - 7. **Built-in or Standard Library Calls**
-		  - Even built-ins that modify state (e.g. `push(array, x)`) might need to read or write into the environment, depending on how they’re wired up.
-		  - 8. **Runtime Error Reporting**
-		  - If a variable lookup fails (Get returns not-found), or an update fails, you typically turn that into a runtime error—so your error‐handling paths also inspect the environment.
-		  - Those are the “where” — every time you introduce, lookup, or mutate a name in your AST, you reach for the `Environment`.
-	      - 9. **Enhance Error Handling with Stack Traces**
-		  - Modify the error reporting mechanism to capture and display call stacks for runtime errors, similar to how Rust handles panics or unrecoverable errors.
-		  - 10. **Consider NaN-boxing for Value Representation**
-		  - Investigate and potentially implement NaN-boxing for more efficient value representation in `evaluator/value.go` if performance becomes a critical concern. This is a complex optimization and should be approached carefully.
-*/
 func (e *Evaluator) Eval(node ast.Node) Value {
 	//fmt.Printf("Evaluating: %T\n", node)
 	switch n := node.(type) {
@@ -446,13 +422,14 @@ func (e *Evaluator) Eval(node ast.Node) Value {
 		return e.EvalVariableDecl(n)
 	case *ast.AssignmentStatement:
 		return e.EvalAssignment(n)
-		// LOOK HERE !!!!!!!!!!!!!!!!!!!!!!!!!!
 	case *ast.IndexAssignmentStatement:
 		return e.EvalIndexAssignment(n)
 	case *ast.IfStatement:
 		return e.EvalConditional(n)
 	case *ast.ForStatement:
 		return e.EvalForStatement(n)
+	case *ast.WhileStatement:
+		return e.EvalWhileStatement(n)
 	case *ast.BlockStatement:
 		e.pushFrame("main", n.Position, "block")
 		defer e.popFrame()
@@ -473,7 +450,6 @@ func (e *Evaluator) Eval(node ast.Node) Value {
 		return e.evalFunctionCall(n)
 	case *ast.ArrayLiteral:
 		return e.evalArrayLiteral(n)
-		// start from here !!!!!!!!!!!!!!!!!!!!!!!!!!
 	case *ast.IndexExpression:
 		return e.evalIndexExpression(n)
 	case *ast.SliceExpression:
@@ -655,7 +631,7 @@ func (e *Evaluator) EvalAssignment(n *ast.AssignmentStatement) Value {
 
 	valueType := getValueType(value)
 	varType := getValueType(bind.Value)
-	if valueType != varType {
+	if !e.TypesCompatible(varType, valueType) {
 		return e.newError(n.Position, ErrTypeMismatch,
 			"type mismatch: cannot assign %s to %s", valueType, varType)
 	}
@@ -669,7 +645,7 @@ func (e *Evaluator) EvalAssignment(n *ast.AssignmentStatement) Value {
 	return value
 }
 
-// For Index Assignment (arr[0] = 42) !!!!!!!!!!!!!!!!!!!!!!!!!!
+// For Index Assignment (arr[0] = 42)
 func (e *Evaluator) EvalIndexAssignment(n *ast.IndexAssignmentStatement) Value {
 	// Validate AST structure
 	if n.Object == nil {
@@ -754,10 +730,52 @@ func (e *Evaluator) initializeToZero(t *ast.Type) Value {
 }
 
 func (e *Evaluator) TypesCompatible(expectedType string, actualType string) bool {
-	if expectedType != actualType {
-		return false
+	// Handle case-insensitive type matching
+	expected := strings.ToLower(expectedType)
+	actual := strings.ToLower(actualType)
+
+	// Direct match
+	if expected == actual {
+		return true
 	}
-	return true
+
+	// Handle unknown type - allow assignment to unknown
+	if expected == "unknown" || actual == "unknown" {
+		return true
+	}
+
+	// Handle array types
+	if strings.HasPrefix(expected, "[]") && strings.HasPrefix(actual, "[]") {
+		// Extract element types and compare them
+		expectedElement := strings.TrimPrefix(expected, "[]")
+		actualElement := strings.TrimPrefix(actual, "[]")
+		return e.TypesCompatible(expectedElement, actualElement)
+	}
+
+	// Handle fixed array types
+	if strings.HasPrefix(expected, "[") && strings.HasPrefix(actual, "[") {
+		// For now, allow any fixed array to match any fixed array
+		// In the future, we could check sizes and element types
+		return true
+	}
+
+	// Handle common type aliases
+	if (expected == "int" && actual == "integer") ||
+		(expected == "integer" && actual == "int") {
+		return true
+	}
+
+	if (expected == "float" && actual == "float64") ||
+		(expected == "float64" && actual == "float") {
+		return true
+	}
+
+	if (expected == "bool" && actual == "boolean") ||
+		(expected == "boolean" && actual == "bool") {
+		return true
+	}
+
+	return false
 }
 
 func (e *Evaluator) EvalConditional(n *ast.IfStatement) Value {
@@ -832,6 +850,40 @@ func (e *Evaluator) EvalForStatement(n *ast.ForStatement) Value {
 			if v := e.Eval(n.Post); isError(v) {
 				return v
 			}
+		}
+	}
+
+	return NULL
+}
+
+func (e *Evaluator) EvalWhileStatement(n *ast.WhileStatement) Value {
+	e.pushFrame("while-loop", n.Position, "while statement")
+	defer e.popFrame()
+
+	for {
+		// Evaluate condition
+		cond := e.Eval(n.Condition)
+		if isError(cond) {
+			return cond
+		}
+		if !cond.IsTruthy() {
+			break
+		}
+
+		// Execute body
+		bodyVal := e.Eval(n.Body)
+		if isError(bodyVal) {
+			return bodyVal
+		}
+
+		// Handle control flow
+		switch bodyVal.Type() {
+		case RETURN_TYPE:
+			return bodyVal // propagate return
+		case BREAK_TYPE:
+			return NULL // exit loop
+		case CONTINUE_TYPE:
+			continue // continue to next iteration
 		}
 	}
 
@@ -935,7 +987,7 @@ func (e *Evaluator) evalFunctionCall(n *ast.FunctionCall) Value {
 
 	for paramIdx, param := range isFunction.Parameters {
 		argValue := results[paramIdx]
-		paramType := param.Type.BaseType
+		paramType := getTypeString(param.Type)
 		argType := getValueType(argValue)
 
 		if !e.TypesCompatible(paramType, argType) {
@@ -982,9 +1034,51 @@ func getValueType(v Value) string {
 		return "STRING"
 	case BOOLEAN_TYPE:
 		return "BOOLEAN"
+	case ARRAY_TYPE:
+		// For arrays, we need to determine the element type
+		array := v.(*ArrayValue)
+		if len(array.Elements) > 0 {
+			elementType := getValueType(array.Elements[0])
+			// Convert to lowercase to match our type system
+			switch elementType {
+			case "INTEGER":
+				return "[]int"
+			case "FLOAT":
+				return "[]float"
+			case "STRING":
+				return "[]string"
+			case "BOOLEAN":
+				return "[]bool"
+			default:
+				return "[]unknown"
+			}
+		}
+		return "[]unknown"
 	default:
 		return v.Type()
 	}
+}
+
+// getTypeString converts an AST Type to a string representation
+func getTypeString(t *ast.Type) string {
+	if t == nil {
+		return "unknown"
+	}
+
+	if t.ArrayType != nil {
+		if t.ArraySize != nil {
+			return fmt.Sprintf("[%d]%s", *t.ArraySize, getTypeString(t.ArrayType))
+		} else {
+			return fmt.Sprintf("[]%s", getTypeString(t.ArrayType))
+		}
+	}
+	if t.PointerType != nil {
+		return fmt.Sprintf("*%s", getTypeString(t.PointerType))
+	}
+	if t.StructName != "" {
+		return t.StructName
+	}
+	return t.BaseType
 }
 
 func isError(obj Value) bool {
@@ -998,7 +1092,6 @@ func newError(format string, args ...interface{}) *Error {
 	return &Error{Message: fmt.Sprintf(format, args...)}
 }
 
-// !!!!!!!!!!!!!!!!!!!!!!!!!!
 func (e *Evaluator) evalIndexExpression(n *ast.IndexExpression) Value {
 	// Evaluate the object being indexed
 	object := e.Eval(n.Object)
@@ -1177,4 +1270,9 @@ func formatValueForOutput(value Value) string {
 	default:
 		return value.String()
 	}
+}
+
+// GetEnvironment returns the current environment
+func (e *Evaluator) GetEnvironment() *Environment {
+	return e.env
 }
