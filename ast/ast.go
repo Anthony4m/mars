@@ -67,12 +67,11 @@ type AssignmentStatement struct {
 	Position Position
 }
 
-// !!!!!!!!!!!!!!!!!!!!!!!!!!
 // IndexAssignmentStatement represents array element assignment
 type IndexAssignmentStatement struct {
-	Object   Expression // The array/string being indexed
-	Index    Expression // The index expression
-	Value    Expression // The value to assign
+	Object   Expression
+	Index    Expression
+	Value    Expression
 	Position Position
 }
 
@@ -130,6 +129,13 @@ type ForStatement struct {
 	Init      Statement
 	Condition Expression
 	Post      Statement
+	Body      *BlockStatement
+	Position  Position
+}
+
+// WhileStatement represents a while loop
+type WhileStatement struct {
+	Condition Expression
 	Body      *BlockStatement
 	Position  Position
 }
@@ -284,6 +290,7 @@ func (ub *UnsafeBlock) TokenLiteral() string               { return "unsafe" }
 func (bs *BlockStatement) TokenLiteral() string            { return "{" }
 func (is *IfStatement) TokenLiteral() string               { return "if" }
 func (fs *ForStatement) TokenLiteral() string              { return "for" }
+func (ws *WhileStatement) TokenLiteral() string            { return "while" }
 func (ps *PrintStatement) TokenLiteral() string            { return "log" }
 func (rs *ReturnStatement) TokenLiteral() string           { return "return" }
 func (es *ExpressionStatement) TokenLiteral() string       { return es.Expression.TokenLiteral() }
@@ -312,6 +319,7 @@ func (ub *UnsafeBlock) Pos() Position               { return ub.Position }
 func (bs *BlockStatement) Pos() Position            { return bs.Position }
 func (is *IfStatement) Pos() Position               { return is.Position }
 func (fs *ForStatement) Pos() Position              { return fs.Position }
+func (ws *WhileStatement) Pos() Position            { return ws.Position }
 func (ps *PrintStatement) Pos() Position            { return ps.Position }
 func (rs *ReturnStatement) Pos() Position           { return rs.Position }
 func (es *ExpressionStatement) Pos() Position       { return es.Position }
@@ -345,6 +353,8 @@ func (is *IfStatement) statementNode()                 {}
 func (is *IfStatement) declarationNode()               {}
 func (fs *ForStatement) statementNode()                {}
 func (fs *ForStatement) declarationNode()              {}
+func (ws *WhileStatement) statementNode()              {}
+func (ws *WhileStatement) declarationNode()            {}
 func (ps *PrintStatement) statementNode()              {}
 func (ps *PrintStatement) declarationNode()            {}
 func (rs *ReturnStatement) statementNode()             {}
@@ -487,7 +497,6 @@ func (as *AssignmentStatement) String() string {
 	return as.Name.Name + " = " + as.Value.String() + ";"
 }
 
-// !!!!!!!!!!!!!!!!!!!!!!!!!!
 func (ias *IndexAssignmentStatement) String() string {
 	return ias.Object.String() + "[" + ias.Index.String() + "] = " + ias.Value.String() + ";"
 }
@@ -558,6 +567,10 @@ func (fs *ForStatement) String() string {
 	}
 	s += " " + fs.Body.String()
 	return s
+}
+
+func (ws *WhileStatement) String() string {
+	return "while " + ws.Condition.String() + " " + ws.Body.String()
 }
 
 func (ps *PrintStatement) String() string {
