@@ -22,7 +22,7 @@ const (
 	ARRAY_TYPE    = "ARRAY"
 )
 
-// Value interface - all runtime values implement this
+// Value interface  all runtime values implement this
 type Value interface {
 	Type() string
 	String() string
@@ -110,8 +110,8 @@ type FunctionValue struct {
 	ReturnType *ast.Type
 	Env        *Environment // For closure support
 	Position   ast.Position
-	IsBuiltin  bool                     // True if this is a built-in function
-	BuiltinFn  func(args []Value) Value // Built-in function implementation
+	IsBuiltin  bool                     // True if this is a builtin function
+	BuiltinFn  func(args []Value) Value // Builtin function implementation
 }
 
 func (fv *FunctionValue) String() string {

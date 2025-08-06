@@ -1,0 +1,22 @@
+// This file contains intentional errors to demonstrate position tracking
+
+func add(a int, b int) -> int {
+    return a + b;
+}
+
+// Missing semicolon - should trigger error
+mut x := 42
+
+// Undefined variable - should trigger error
+y = 10;
+
+// Invalid syntax - should trigger error
+if x > 0 {
+    log("positive"
+}
+
+// Type mismatch - should trigger error
+mut z : string = 123;
+
+// Duplicate declaration - should trigger error
+mut x := 100; 

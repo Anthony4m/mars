@@ -30,6 +30,7 @@ const (
 	NIL
 	BREAK
 	CONTINUE
+	WHILE
 
 	// Type keywords (needed for parser)
 	INT       // int
@@ -97,6 +98,7 @@ var keywords = map[string]TokenType{
 	"nil":      NIL,
 	"break":    BREAK,
 	"continue": CONTINUE,
+	"while":    WHILE,
 
 	// Type keywords (these are essential for the parser)
 	"int":    INT,
@@ -160,6 +162,8 @@ func (t TokenType) String() string {
 		return "BREAK"
 	case CONTINUE:
 		return "CONTINUE"
+	case WHILE:
+		return "WHILE"
 	case INT:
 		return "INT"
 	case FLOAT:

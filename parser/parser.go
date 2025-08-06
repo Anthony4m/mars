@@ -7,6 +7,7 @@ import (
 	"mars/errors"
 	"mars/lexer"
 	"strconv"
+	"strings"
 )
 
 type parser struct {
@@ -15,10 +16,19 @@ type parser struct {
 	peekToken lexer.Token
 	prevToken lexer.Token
 	errors    *errors.ErrorList
+	source    []string // Store source lines for better error reporting
 }
 
 func NewParser(lexer *lexer.Lexer) *parser {
-	p := &parser{lexer: lexer, errors: errors.NewErrorList()}
+	return NewParserWithSource(lexer, []string{})
+}
+
+func NewParserWithSource(lexer *lexer.Lexer, sourceLines []string) *parser {
+	p := &parser{
+		lexer:  lexer,
+		errors: errors.NewErrorList(),
+		source: sourceLines,
+	}
 	p.nextToken()
 	p.nextToken()
 	return p
@@ -47,7 +57,177 @@ func (p *parser) recordError(message string) {
 }
 
 func (p *parser) recordSyntaxError(message string) {
-	p.errors.Add(errors.NewSyntaxError(message, p.curToken.Line, p.curToken.Column))
+	sourceLine := p.getSourceLine(p.curToken.Line)
+	err := errors.NewSyntaxError(message, p.curToken.Line, p.curToken.Column)
+	if sourceLine != "" {
+		err = err.WithSourceLine(sourceLine)
+	}
+	p.errors.Add(err)
+}
+
+func (p *parser) recordParserStateError(message string) {
+	// Add context about current parser state with user-friendly symbols
+	curSymbol := p.tokenToSymbol(p.curToken.Type.String())
+	peekSymbol := p.tokenToSymbol(p.peekToken.Type.String())
+	context := fmt.Sprintf("current token: %s, peek token: %s", curSymbol, peekSymbol)
+
+	// Convert token names in the message itself
+	convertedMessage := p.convertTokenNamesInMessage(message)
+	fullMessage := fmt.Sprintf("%s (context: %s)", convertedMessage, context)
+
+	sourceLine := p.getSourceLine(p.curToken.Line)
+	err := errors.NewParserStateError(fullMessage, p.curToken.Line, p.curToken.Column)
+	if sourceLine != "" {
+		err = err.WithSourceLine(sourceLine)
+	}
+	p.errors.Add(err)
+}
+
+// convertTokenNamesInMessage replaces token names with symbols in error messages
+func (p *parser) convertTokenNamesInMessage(message string) string {
+	// Replace common token name patterns
+	replacements := map[string]string{
+		"RBRACE":    "'}'",
+		"LBRACE":    "'{'",
+		"RBRACKET":  "']'",
+		"LBRACKET":  "'['",
+		"SEMICOLON": "';'",
+		"RPAREN":    "')'",
+		"LPAREN":    "'('",
+		"COLON":     "':'",
+		"COLONEQ":   "':='",
+		"EQ":        "'='",
+		"FUNC":      "function keyword",
+		"RETURN":    "return keyword",
+		"IF":        "if keyword",
+		"FOR":       "for keyword",
+		"WHILE":     "while keyword",
+		"EOF":       "end of file",
+	}
+
+	result := message
+	for token, symbol := range replacements {
+		result = strings.ReplaceAll(result, token, symbol)
+	}
+	return result
+}
+
+// tokenToSymbol converts token names to user-friendly symbols
+func (p *parser) tokenToSymbol(token string) string {
+	switch token {
+	case "RBRACE":
+		return "'}'"
+	case "LBRACE":
+		return "'{'"
+	case "SEMICOLON":
+		return "';'"
+	case "RPAREN":
+		return "')'"
+	case "LPAREN":
+		return "'('"
+	case "RBRACKET":
+		return "']'"
+	case "LBRACKET":
+		return "'['"
+	case "COLON":
+		return "':'"
+	case "COLONEQ":
+		return "':='"
+	case "EQ":
+		return "'='"
+	case "PLUS":
+		return "'+'"
+	case "MINUS":
+		return "'-'"
+	case "ASTERISK":
+		return "'*'"
+	case "SLASH":
+		return "'/'"
+	case "PERCENT":
+		return "'%'"
+	case "BANG":
+		return "'!'"
+	case "LT":
+		return "'<'"
+	case "GT":
+		return "'>'"
+	case "LTEQ":
+		return "'<='"
+	case "GTEQ":
+		return "'>='"
+	case "EQEQ":
+		return "'=='"
+	case "BANGEQ":
+		return "'!='"
+	case "AND":
+		return "'&&'"
+	case "OR":
+		return "'||'"
+	case "COMMA":
+		return "','"
+	case "DOT":
+		return "'.'"
+	case "EOF":
+		return "end of file"
+	case "FUNC":
+		return "function keyword"
+	case "RETURN":
+		return "return keyword"
+	case "IF":
+		return "if keyword"
+	case "ELSE":
+		return "else keyword"
+	case "FOR":
+		return "for keyword"
+	case "WHILE":
+		return "while keyword"
+	case "MUT":
+		return "mut keyword"
+	case "STRUCT":
+		return "struct keyword"
+	case "INT":
+		return "int keyword"
+	case "FLOAT":
+		return "float keyword"
+	case "STRING_KW":
+		return "string keyword"
+	case "BOOL":
+		return "bool keyword"
+	case "TRUE":
+		return "true"
+	case "FALSE":
+		return "false"
+	case "NIL":
+		return "nil"
+	case "IDENT":
+		return "identifier"
+	case "NUMBER":
+		return "number"
+	case "STRING":
+		return "string literal"
+	default:
+		return token
+	}
+}
+
+func (p *parser) recordArrayIndexError(message string) {
+	p.errors.Add(errors.NewArrayIndexError(message, p.curToken.Line, p.curToken.Column))
+}
+
+func (p *parser) recordFunctionCallError(message string) {
+	p.errors.Add(errors.NewFunctionCallError(message, p.curToken.Line, p.curToken.Column))
+}
+
+func (p *parser) recordControlFlowError(message string) {
+	p.errors.Add(errors.NewControlFlowError(message, p.curToken.Line, p.curToken.Column))
+}
+
+// getSourceLine returns the source line at the given line number (1-indexed)
+func (p *parser) getSourceLine(lineNum int) string {
+	if lineNum > 0 && lineNum <= len(p.source) {
+		return p.source[lineNum-1]
+	}
+	return ""
 }
 
 func (p *parser) nextToken() {
@@ -164,7 +344,6 @@ func (p *parser) parseStructTypeReference() *ast.Type {
 
 func (p *parser) parseDeclaration() ast.Declaration {
 	switch p.curToken.Type {
-	//!!!!!!!!!!!!!!!!!!!!!!!!!!
 	case lexer.COMMENT:
 		// Skip comments by consuming the token and returning nil
 		p.nextToken()
@@ -338,6 +517,11 @@ func (p *parser) parseVariableDeclaration() ast.Declaration {
 		// Type inference: x := 5
 		p.nextToken() // consume ":="
 		varDecl.Value = p.parseExpression()
+
+		// Infer type from value
+		if varDecl.Value != nil {
+			varDecl.Type = p.inferTypeFromExpression(varDecl.Value)
+		}
 	} else {
 		p.recordSyntaxError("expected ':' or ':=' in variable declaration")
 		return nil
@@ -464,7 +648,6 @@ func (p *parser) parseAssignment() ast.Declaration {
 			p.recordSyntaxError("expected '=' after array index")
 			return nil
 		}
-		//!!!!!!!!!!!!!!!!!!!!!!!!!!
 		value := p.parseExpression()
 
 		// Optional semicolon
@@ -491,8 +674,6 @@ func (p *parser) parseAssignment() ast.Declaration {
 	if p.curTokenIs(lexer.SEMICOLON) {
 		p.nextToken()
 	}
-
-	//!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	// Convert object back to identifier for regular assignment
 	if ident, ok := object.(*ast.Identifier); ok {
@@ -656,6 +837,7 @@ func (p *parser) parsePrimary() ast.Expression {
 
 	switch p.curToken.Type {
 	case lexer.IDENT:
+
 		expr = p.parseIdentifierOrStructLiteral()
 	case lexer.NUMBER:
 		expr = p.parseNumberLiteral()
@@ -675,7 +857,7 @@ func (p *parser) parsePrimary() ast.Expression {
 		expr = p.parseArrayLiteral()
 	default:
 		p.synchronize()
-		p.recordSyntaxError(fmt.Sprintf("unexpected token %s in expression", p.curToken.Type))
+		p.recordParserStateError(fmt.Sprintf("unexpected token %s in expression", p.curToken.Type))
 		return nil
 	}
 
@@ -689,6 +871,8 @@ func (p *parser) parsePrimary() ast.Expression {
 		case lexer.DOT:
 			expr = p.parseMemberExpression(expr)
 		default:
+			// Return for any token that's not a suffix operator
+			// This allows higher-level parsers to handle binary operators
 			return expr
 		}
 	}
@@ -701,8 +885,15 @@ func (p *parser) parseIdentifierOrStructLiteral() ast.Expression {
 	p.nextToken() // consume identifier
 
 	// Check if this is a struct literal: Point{x: 1, y: 2}
+	// Only parse as struct literal if we're in a context where it makes sense
+	// Don't parse as struct literal if this identifier is part of a larger expression
 	if p.curTokenIs(lexer.LBRACE) {
-		return p.parseStructLiteral(name)
+		// Don't parse as struct literal in expression contexts where LBRACE might belong to control flow
+		// This is a conservative approach to prevent parsing "target {" as a struct literal in "== target {"
+		return &ast.Identifier{
+			Name:     name,
+			Position: pos,
+		}
 	}
 
 	return &ast.Identifier{
@@ -714,6 +905,16 @@ func (p *parser) parseIdentifierOrStructLiteral() ast.Expression {
 // parseStructLiteral handles: IDENT "{" [ FieldInit ( "," FieldInit )* ] "}"
 func (p *parser) parseStructLiteral(typeName string) ast.Expression {
 	startPos := p.previousPosition() // Position of the type name
+
+	// Safety check: ensure we're actually parsing a struct literal
+	if !p.curTokenIs(lexer.LBRACE) {
+		// This should never happen, but if it does, return an identifier instead
+		return &ast.Identifier{
+			Name:     typeName,
+			Position: startPos,
+		}
+	}
+
 	structLit := &ast.StructLiteral{
 		Type: &ast.Identifier{
 			Name:     typeName,
@@ -750,8 +951,10 @@ func (p *parser) parseStructLiteral(typeName string) ast.Expression {
 }
 
 func (p *parser) parseFieldInit() *ast.FieldInit {
+	// Safety check: ensure we're actually parsing a struct field
 	if !p.curTokenIs(lexer.IDENT) {
-		p.recordSyntaxError("expected field name")
+		// This should never happen in normal parsing, but if it does, return nil
+		// instead of recording an error that might confuse the parser further
 		return nil
 	}
 
@@ -777,8 +980,6 @@ func (p *parser) parseIndexOrSliceExpression(object ast.Expression) ast.Expressi
 	startPos := p.currentPosition()
 	p.nextToken() // consume "["
 
-	//!!!!!!!!!!!!!!!!!!!!!!!!!!
-	// Check if it's slicing (has colon immediately or after start expression)
 	if p.curTokenIs(lexer.COLON) {
 		// Handle [:end] case
 		p.nextToken() // consume ":"
@@ -827,9 +1028,11 @@ func (p *parser) parseIndexOrSliceExpression(object ast.Expression) ast.Expressi
 	}
 
 	// Regular indexing
-	if !p.expectCurrent(lexer.RBRACKET) {
+	if !p.curTokenIs(lexer.RBRACKET) {
+		p.recordArrayIndexError("missing closing bracket ']' in array index")
 		return nil
 	}
+	p.nextToken() // consume ']'
 
 	return &ast.IndexExpression{
 		Object:   object,
@@ -1005,11 +1208,19 @@ func (p *parser) parseStatement() ast.Statement {
 		return nil
 	}
 
+	// Skip comments
+	if p.curTokenIs(lexer.COMMENT) {
+		p.nextToken()             // consume comment
+		return p.parseStatement() // recursively parse the next statement
+	}
+
 	switch p.curToken.Type {
 	case lexer.IF:
 		return p.parseIfStatement()
 	case lexer.FOR:
 		return p.parseForStatement()
+	case lexer.WHILE:
+		return p.parseWhileStatement()
 	case lexer.RETURN:
 		return p.parseReturnStatement()
 	case lexer.LOG:
@@ -1018,6 +1229,18 @@ func (p *parser) parseStatement() ast.Statement {
 		return p.parseBreakStatement()
 	case lexer.CONTINUE:
 		return p.parseContinueStatement()
+	case lexer.MUT, lexer.IDENT:
+		// Check if this is a variable declaration
+		if p.curTokenIs(lexer.MUT) || (p.curTokenIs(lexer.IDENT) && (p.peekTokenIs(lexer.COLON) || p.peekTokenIs(lexer.COLONEQ))) {
+			decl := p.parseVariableDeclaration()
+			if decl != nil {
+				// VarDecl implements both Declaration and Statement
+				return decl.(ast.Statement)
+			}
+			return nil
+		}
+		// Fall through to expression statement
+		fallthrough
 	default:
 		return p.parseExpressionStatement()
 	}
@@ -1041,9 +1264,8 @@ func (p *parser) parseBlockStatement() *ast.BlockStatement {
 		stmt := p.parseStatement()
 		if stmt != nil {
 			block.Statements = append(block.Statements, stmt)
-		}
-		// Ensure we advance past the statement if we're not at the end
-		if !p.curTokenIs(lexer.RBRACE) && !p.curTokenIs(lexer.EOF) {
+		} else {
+			// If parsing fails, advance token to prevent infinite loop
 			p.nextToken()
 		}
 	}
@@ -1066,7 +1288,7 @@ func (p *parser) parseIfStatement() ast.Statement {
 
 	// Ensure we're on LBRACE before parsing the block
 	if !p.curTokenIs(lexer.LBRACE) {
-		p.recordSyntaxError("expected '{' after if condition")
+		p.recordControlFlowError("expected '{' after if condition")
 		return nil
 	}
 	stmt.Consequence = p.parseBlockStatement()
@@ -1103,7 +1325,8 @@ func (p *parser) parseForStatement() ast.Statement {
 	} else if p.curTokenIs(lexer.LBRACE) {
 		// No init, no condition, no post
 	} else {
-		stmt.Init = p.parseStatement()
+		// Parse init - could be variable declaration or expression
+		stmt.Init = p.parseForInit()
 		if !p.curTokenIs(lexer.SEMICOLON) {
 			p.recordSyntaxError("expected ';' after for loop init")
 			return nil
@@ -1132,16 +1355,113 @@ func (p *parser) parseForStatement() ast.Statement {
 		// Extra semicolon, skip
 		p.nextToken()
 	} else {
-		stmt.Post = p.parseStatement()
+		// Parse post - could be assignment or expression
+		stmt.Post = p.parseForPost()
 	}
 
 	// Ensure we're on LBRACE before parsing the block
 	if !p.curTokenIs(lexer.LBRACE) {
-		p.recordSyntaxError("expected '{' after for loop header")
+		p.recordControlFlowError("expected '{' after for loop header")
 		return nil
 	}
 	stmt.Body = p.parseBlockStatement()
 	return stmt
+}
+
+func (p *parser) parseWhileStatement() ast.Statement {
+	startPos := p.currentPosition()
+	stmt := &ast.WhileStatement{
+		Position: startPos,
+	}
+	p.nextToken() // consume 'while'
+
+	stmt.Condition = p.parseExpression()
+
+	// Ensure we're on LBRACE before parsing the block
+	if !p.curTokenIs(lexer.LBRACE) {
+		p.recordControlFlowError("expected '{' after while condition")
+		return nil
+	}
+	stmt.Body = p.parseBlockStatement()
+	return stmt
+}
+
+// parseForInit handles the init part of a for loop
+// It can be a variable declaration or an expression
+func (p *parser) parseForInit() ast.Statement {
+	// Check if this looks like a variable declaration
+	if p.curTokenIs(lexer.MUT) || (p.curTokenIs(lexer.IDENT) && (p.peekTokenIs(lexer.COLON) || p.peekTokenIs(lexer.COLONEQ))) {
+		decl := p.parseVariableDeclarationForLoop()
+		if decl != nil {
+			return decl.(ast.Statement)
+		}
+		return nil
+	}
+
+	// Otherwise, parse as an expression statement
+	return p.parseExpressionStatement()
+}
+
+// parseVariableDeclarationForLoop is like parseVariableDeclaration but doesn't consume semicolons
+// This is needed for for loop init clauses where the semicolon is part of the for loop syntax
+func (p *parser) parseVariableDeclarationForLoop() ast.Declaration {
+	startPos := p.currentPosition()
+	varDecl := &ast.VarDecl{
+		Position: startPos,
+	}
+
+	// Check for "mut" keyword
+	if p.curTokenIs(lexer.MUT) {
+		varDecl.Mutable = true
+		p.nextToken() // consume "mut"
+	} else {
+		// For loop variables should be mutable by default
+		varDecl.Mutable = true
+	}
+
+	if !p.curTokenIs(lexer.IDENT) {
+		p.recordSyntaxError("expected variable name")
+		return nil
+	}
+	varDecl.Name = &ast.Identifier{
+		Name:     p.curToken.Literal,
+		Position: p.currentPosition(),
+	}
+	p.nextToken() // consume variable name
+
+	if p.curTokenIs(lexer.COLON) {
+		// Explicit type: x : int = 5
+		p.nextToken() // consume ":"
+		varDecl.Type = p.parseType()
+
+		if p.curTokenIs(lexer.EQ) {
+			p.nextToken() // consume "="
+			varDecl.Value = p.parseExpression()
+		}
+	} else if p.curTokenIs(lexer.COLONEQ) {
+		// Type inference: x := 5
+		p.nextToken() // consume ":="
+		varDecl.Value = p.parseExpression()
+
+		// Infer type from value
+		if varDecl.Value != nil {
+			varDecl.Type = p.inferTypeFromExpression(varDecl.Value)
+		}
+	} else {
+		p.recordSyntaxError("expected ':' or ':=' in variable declaration")
+		return nil
+	}
+
+	// Don't consume semicolon - it's part of the for loop syntax
+	return varDecl
+}
+
+// parseForPost handles the post part of a for loop
+// It can be an assignment or an expression
+func (p *parser) parseForPost() ast.Statement {
+	// For now, just parse as an expression statement
+	// This handles assignments like "i = i + 1"
+	return p.parseExpressionStatement()
 }
 
 func (p *parser) parseReturnStatement() ast.Statement {
@@ -1210,9 +1530,14 @@ func (p *parser) parseContinueStatement() ast.Statement {
 
 func (p *parser) parseExpressionStatement() ast.Statement {
 	startPos := p.currentPosition()
-	//!!!!!!!!!!!!!!!!!!!!!!!!!!
 	// Parse the left-hand side of what might be an assignment
 	leftExpr := p.parseExpression()
+
+	// If parseExpression returned nil due to an error, return nil
+	// This allows the parser to recover and continue with the next statement
+	if leftExpr == nil {
+		return nil
+	}
 
 	// Check if this is an assignment (leftExpr = rightExpr)
 	if p.curTokenIs(lexer.EQ) {
@@ -1260,6 +1585,62 @@ func (p *parser) parseExpressionStatement() ast.Statement {
 	return stmt
 }
 
+// inferTypeFromExpression attempts to infer the type from an expression
+func (p *parser) inferTypeFromExpression(expr ast.Expression) *ast.Type {
+	switch e := expr.(type) {
+	case *ast.Literal:
+		switch e.Value.(type) {
+		case int64, int:
+			return ast.NewBaseType("int")
+		case float64:
+			return ast.NewBaseType("float")
+		case string:
+			return ast.NewBaseType("string")
+		case bool:
+			return ast.NewBaseType("bool")
+		default:
+			return ast.NewBaseType("unknown")
+		}
+	case *ast.Identifier:
+		// For identifiers, we can't infer the type at parse time
+		// This would need to be resolved during evaluation
+		return ast.NewBaseType("unknown")
+	case *ast.FunctionCall:
+		// For function calls, we can't infer the return type at parse time
+		return ast.NewBaseType("unknown")
+	case *ast.BinaryExpression:
+		// For binary expressions, infer based on operands
+		leftType := p.inferTypeFromExpression(e.Left)
+		rightType := p.inferTypeFromExpression(e.Right)
+
+		// If both are numeric, result is numeric
+		if leftType.BaseType == "int" || leftType.BaseType == "float" {
+			if rightType.BaseType == "int" || rightType.BaseType == "float" {
+				// If either is float, result is float
+				if leftType.BaseType == "float" || rightType.BaseType == "float" {
+					return ast.NewBaseType("float")
+				}
+				return ast.NewBaseType("int")
+			}
+		}
+
+		// For string concatenation
+		if e.Operator == "+" && (leftType.BaseType == "string" || rightType.BaseType == "string") {
+			return ast.NewBaseType("string")
+		}
+
+		// For comparisons, result is bool
+		if e.Operator == "==" || e.Operator == "!=" || e.Operator == "<" ||
+			e.Operator == ">" || e.Operator == "<=" || e.Operator == ">=" {
+			return ast.NewBaseType("bool")
+		}
+
+		return ast.NewBaseType("unknown")
+	default:
+		return ast.NewBaseType("unknown")
+	}
+}
+
 // ===== UTILITY METHODS =====
 func (p *parser) peekTokenIs(t lexer.TokenType) bool {
 	return p.peekToken.Type == t
@@ -1278,7 +1659,14 @@ func (p *parser) expectPeek(t lexer.TokenType) bool {
 		p.nextToken()
 		return true
 	}
-	p.recordSyntaxError(fmt.Sprintf("expected next token to be %s, got %s", t.String(), p.peekToken.Type.String()))
+
+	// Add source line context to the error
+	sourceLine := p.getSourceLine(p.peekToken.Line)
+	err := errors.NewUnexpectedTokenError(t.String(), p.peekToken.Type.String(), p.peekToken.Line, p.peekToken.Column)
+	if sourceLine != "" {
+		err = err.WithSourceLine(sourceLine)
+	}
+	p.errors.Add(err)
 	p.synchronize()
 	return false
 }
@@ -1288,7 +1676,14 @@ func (p *parser) expectCurrent(t lexer.TokenType) bool {
 		p.nextToken()
 		return true
 	}
-	p.recordSyntaxError(fmt.Sprintf("expected current token to be %s, got %s", t.String(), p.curToken.Type.String()))
+
+	// Add source line context to the error
+	sourceLine := p.getSourceLine(p.curToken.Line)
+	err := errors.NewUnexpectedTokenError(t.String(), p.curToken.Type.String(), p.curToken.Line, p.curToken.Column)
+	if sourceLine != "" {
+		err = err.WithSourceLine(sourceLine)
+	}
+	p.errors.Add(err)
 	p.synchronize()
 	return false
 }
