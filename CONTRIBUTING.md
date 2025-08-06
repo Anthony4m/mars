@@ -1,421 +1,233 @@
-# Contributing to Mars
+# Contributing to Mars Programming Language
 
-Thank you for your interest in contributing to the Mars programming language! This document provides guidelines and information for contributors.
+Thank you for your interest in contributing to Mars! This document provides guidelines and information for contributors.
 
-## Table of Contents
+## **What We're Building**
 
-- [Getting Started](#getting-started)
-- [Development Setup](#development-setup)
-- [Project Structure](#project-structure)
-- [Coding Standards](#coding-standards)
-- [Testing](#testing)
-- [Contribution Workflow](#contribution-workflow)
-- [Current Development Priorities](#current-development-priorities)
-- [Reporting Issues](#reporting-issues)
-- [Code of Conduct](#code-of-conduct)
+Mars is a modern, statically-typed programming language designed for:
+- **Algorithmic Problem Solving**: Successfully solves LeetCode Hard problems
+- **Clean Syntax**: Modern, expressive language design
+- **Go Integration**: Seamless interoperability with Go ecosystem
+- **Type Safety**: Strong static typing with inference
 
-## Getting Started
+## **Development Setup**
 
 ### Prerequisites
+- Go 1.21 or later
+- Git
 
-- **Go 1.21 or later** - [Download here](https://golang.org/dl/)
-- **Git** - [Download here](https://git-scm.com/)
-- **Basic understanding of compiler design** - Familiarity with lexers, parsers, and ASTs is helpful
-
-### Quick Start
-
-1. **Fork the repository** on GitHub
-2. **Clone your fork**:
-   ```bash
-   git clone https://github.com/Anthony4m/mars.git
-   cd mars
-   ```
-3. **Set up the upstream remote**:
-   ```bash
-   git remote add upstream https://github.com/Anthony4m/mars.git
-   ```
-4. **Build the project**:
-   ```bash
-   go build ./...
-   ```
-5. **Run tests**:
-   ```bash
-   go test ./...
-   ```
-
-## Development Setup
-
-### Environment Setup
-
-1. **Install Go** and ensure it's in your PATH
-2. **Set up your IDE** - Recommended: VS Code with Go extension
-3. **Install development tools**:
-   ```bash
-   go install golang.org/x/tools/cmd/goimports@latest
-   go install golang.org/x/lint/golint@latest
-   ```
-
-### Building and Testing
-
+### Getting Started
 ```bash
-# Build all packages
-go build ./...
+# Clone the repository
+git clone https://github.com/yourusername/mars.git
+cd mars
 
-# Run all tests
+# Run tests
 go test ./...
 
-# Run tests with verbose output
-go test -v ./...
-
-# Run tests for a specific package
-go test ./evaluator
-
-# Run tests with coverage
-go test -cover ./...
-
-# Format code
-go fmt ./...
-
-# Run linter
-golint ./...
+# Test Mars programs
+go run cmd/mars/*.go run examples/while_loop_test.mars
 ```
 
-### Testing Your Changes
+## **Current Status**
 
+### **Completed Features**
+- **Core Language**: Variables, functions, control flow
+- **Data Structures**: Arrays, nested arrays, indexing
+- **Control Flow**: If/else, for loops, while loops, break/continue
+- **Type System**: Static typing with inference
+- **Algorithmic Support**: 5+ LeetCode problems solved
+
+### **Areas for Contribution**
+
+#### **High Priority**
+1. **String Operations**: Enhanced string manipulation
+2. **Hash Maps**: Dictionary data structures
+3. **Dynamic Arrays**: Append, remove operations
+4. **Standard Library**: More built-in functions
+
+#### **Medium Priority**
+1. **Package System**: Module imports and dependencies
+2. **Concurrency**: Goroutines and channels
+3. **IDE Support**: Language server and tooling
+4. **Performance**: Code optimization
+
+#### **Low Priority**
+1. **Documentation**: More examples and tutorials
+2. **Testing**: Additional test cases
+3. **Examples**: More algorithmic problems
+
+## **How to Contribute**
+
+### **1. Choose an Issue**
+- Check existing issues or create a new one
+- Comment on issues you'd like to work on
+- We'll assign it to you
+
+### **2. Development Workflow**
 ```bash
-# Test the lexer
-go test ./lexer -v
-
-# Test the parser
-go test ./parser -v
-
-# Test the analyzer
-go test ./analyzer -v
-
-# Test the evaluator
-go test ./evaluator -v
-
-# Test error handling
-go test ./errors -v
-```
-
-## Project Structure
-
-```
-mars/
-├── lexer/          # Token definitions and lexical analysis ✅
-├── parser/         # Syntax analysis and AST construction ✅
-├── analyzer/       # Static analysis and type checking ✅
-├── evaluator/      # Runtime evaluation and execution ✅
-├── errors/         # Error handling and reporting ✅
-├── ast/            # Abstract Syntax Tree definitions ✅
-├── cmd/
-│   └── test_errors/ # Simple test runner ✅
-└── docs/           # Documentation ✅
-```
-
-### Key Components
-
-- **`lexer/`**: Converts source code into tokens
-- **`parser/`**: Builds Abstract Syntax Tree from tokens
-- **`analyzer/`**: Performs type checking and semantic analysis
-- **`evaluator/`**: Executes AST nodes at runtime
-- **`ast/`**: Defines AST node types and interfaces
-- **`errors/`**: Provides error reporting and handling
-
-## Coding Standards
-
-### Go Style Guide
-
-- Follow the [Effective Go](https://golang.org/doc/effective_go.html) guidelines
-- Use `go fmt` to format your code
-- Use `goimports` to organize imports
-- Write clear, descriptive comments for exported functions and types
-
-### Code Organization
-
-- **Package structure**: Keep related functionality together
-- **File naming**: Use descriptive names that reflect the content
-- **Function length**: Keep functions focused and reasonably sized
-- **Error handling**: Always check and handle errors appropriately
-
-### Naming Conventions
-
-```go
-// Use PascalCase for exported names
-type FunctionValue struct {
-    Name string
-}
-
-// Use camelCase for unexported names
-func (e *Evaluator) evalFunctionCall(n *ast.FunctionCall) Value {
-    // implementation
-}
-
-// Use UPPER_CASE for constants
-const (
-    INTEGER_TYPE = "INTEGER"
-    STRING_TYPE  = "STRING"
-)
-```
-
-### Error Handling
-
-```go
-// Always check errors
-result, err := someOperation()
-if err != nil {
-    return e.newError(pos, ErrRuntimeError, "operation failed: %v", err)
-}
-
-// Use structured error reporting
-return e.newError(position, ErrTypeMismatch, 
-    "cannot assign %s to %s", sourceType, targetType)
-```
-
-## Testing
-
-### Writing Tests
-
-- **Test coverage**: Aim for >95% coverage for new code
-- **Test organization**: Group related tests together
-- **Test names**: Use descriptive names that explain what's being tested
-- **Test data**: Use realistic test cases
-
-### Test Structure
-
-```go
-func TestFeatureName(t *testing.T) {
-    tests := []struct {
-        name     string
-        input    string
-        expected interface{}
-        shouldError bool
-    }{
-        {
-            name:     "basic case",
-            input:    "x := 42;",
-            expected: 42,
-            shouldError: false,
-        },
-        {
-            name:     "error case",
-            input:    "x := ;",
-            expected: nil,
-            shouldError: true,
-        },
-    }
-
-    for _, tc := range tests {
-        t.Run(tc.name, func(t *testing.T) {
-            // Test implementation
-        })
-    }
-}
-```
-
-### Running Tests
-
-```bash
-# Run all tests
-go test ./...
-
-# Run tests with coverage
-go test -cover ./...
-
-# Run tests for specific package
-go test ./evaluator
-
-# Run tests with verbose output
-go test -v ./evaluator
-
-# Run specific test
-go test -run TestFunctionName ./evaluator
-```
-
-## Contribution Workflow
-
-### 1. Choose an Issue
-
-- Check the [Issues](https://github.com/Anthony4m/mars/issues) page
-- Look for issues labeled `good first issue` for beginners
-- Comment on the issue to let others know you're working on it
-
-### 2. Create a Feature Branch
-
-```bash
-# Update your fork
-git fetch upstream
-git checkout main
-git merge upstream/main
-
-# Create a new branch
+# Create a feature branch
 git checkout -b feature/your-feature-name
-```
 
-### 3. Make Your Changes
+# Make your changes
+# Add tests for new functionality
+# Update documentation
 
-- Write your code following the coding standards
-- Add tests for new functionality
-- Update documentation if needed
-- Ensure all tests pass
+# Run tests
+go test ./...
 
-### 4. Commit Your Changes
+# Commit your changes
+git commit -m "feat: add your feature description"
 
-```bash
-# Stage your changes
-git add .
-
-# Commit with a descriptive message
-git commit -m "feat: add array literal evaluation
-
-- Implement ArrayLiteral evaluation in evaluator
-- Add tests for array literal operations
-- Update documentation for array support"
-```
-
-### 5. Push and Create a Pull Request
-
-```bash
-# Push to your fork
+# Push and create a pull request
 git push origin feature/your-feature-name
 ```
 
-Then create a Pull Request on GitHub with:
-- Clear description of changes
-- Reference to related issues
-- Screenshots if UI changes
-- Test results
+### **3. Code Standards**
+- **Go Style**: Follow Go formatting and conventions
+- **Comments**: Document public APIs and complex logic
+- **Tests**: Add tests for new functionality
+- **Documentation**: Update relevant docs
 
-### 6. Code Review
+### **4. Pull Request Guidelines**
+- **Title**: Clear, descriptive title
+- **Description**: Explain what and why (not how)
+- **Tests**: Include test cases
+- **Documentation**: Update docs if needed
 
-- Address review comments
-- Make requested changes
-- Ensure CI checks pass
-- Wait for maintainer approval
+## **Testing**
 
-## Current Development Priorities
+### **Run All Tests**
+```bash
+go test ./...
+```
 
-### High Priority 🔥
+### **Test Mars Programs**
+```bash
+# Test basic functionality
+go run cmd/mars/*.go run examples/while_loop_test.mars
 
-1. **Array/Struct Runtime Support**
-   - Implement `ArrayLiteral` evaluation
-   - Implement `StructLiteral` evaluation
-   - Add array indexing support
-   - Add member access support
+# Test algorithmic problems
+go run cmd/mars/*.go run examples/two_sum_working_final.mars
+go run cmd/mars/*.go run examples/binary_search_with_while.mars
+```
 
-2. **Built-in Functions**
-   - Add `len()` function for arrays and strings
-   - Add `append()` function for slices
-   - Add basic math functions (`abs()`, `min()`, `max()`)
-   - Add string functions (`substring()`, `contains()`)
+### **Add New Tests**
+- Add test files in appropriate directories
+- Test both success and error cases
+- Include edge cases and boundary conditions
 
-3. **CLI Tools**
-   - Create full `zcc` compiler interface
-   - Add `zcc run` command
-   - Add `zcc build` command
-   - Add interactive REPL
+## **Documentation**
 
-### Medium Priority 🟡
+### **Code Documentation**
+- Document all public APIs
+- Include usage examples
+- Explain complex algorithms
 
-4. **Code Generation**
-   - Create transpiler to Go
-   - Generate idiomatic Go code
-   - Handle memory management
-   - Integrate with Go toolchain
+### **User Documentation**
+- Update README.md for new features
+- Add examples to docs/
+- Create tutorials for new capabilities
 
-5. **Standard Library**
-   - Expand built-in function library
-   - Add utility functions
-   - Add data structure operations
-   - Add I/O functions
+## **Bug Reports**
 
-### Low Priority 🟢
+### **Before Reporting**
+1. Check existing issues
+2. Try to reproduce the bug
+3. Test with latest version
 
-6. **Advanced Features**
-   - Package system and imports
-   - Concurrency support
-   - Generics
-   - Macros
+### **Bug Report Template**
+```
+**Description**
+Brief description of the bug
 
-## Good First Issues
+**Steps to Reproduce**
+1. Step 1
+2. Step 2
+3. Step 3
 
-If you're new to the project, here are some good starting points:
+**Expected Behavior**
+What should happen
 
-- **Documentation**: Improve existing docs or add examples
-- **Tests**: Add test cases for edge cases
-- **Error Messages**: Improve error reporting
-- **Code Cleanup**: Refactor existing code
-- **Performance**: Optimize existing implementations
+**Actual Behavior**
+What actually happens
 
-## Reporting Issues
+**Environment**
+- OS: [e.g., macOS, Linux, Windows]
+- Go version: [e.g., 1.21.0]
+- Mars version: [if applicable]
 
-### Bug Reports
+**Additional Context**
+Any other relevant information
+```
 
-When reporting bugs, please include:
+## **Feature Requests**
 
-1. **Clear description** of the problem
-2. **Steps to reproduce** the issue
-3. **Expected behavior** vs actual behavior
-4. **Environment details** (OS, Go version, etc.)
-5. **Code example** that demonstrates the issue
-6. **Error messages** if any
+### **Before Requesting**
+1. Check if feature already exists
+2. Consider if it fits Mars's goals
+3. Think about implementation complexity
 
-### Feature Requests
+### **Feature Request Template**
+```
+**Problem**
+Description of the problem this feature would solve
 
-When requesting features, please include:
+**Proposed Solution**
+Description of the proposed feature
 
-1. **Clear description** of the feature
-2. **Use case** and motivation
-3. **Proposed syntax** or interface
-4. **Examples** of how it would be used
-5. **Consideration** of implementation complexity
+**Alternatives Considered**
+Other approaches you've considered
 
-## Code of Conduct
+**Additional Context**
+Any other relevant information
+```
 
-### Our Standards
+## **Community Guidelines**
 
-- Be respectful and inclusive
-- Use welcoming and inclusive language
-- Be collaborative and constructive
-- Focus on what is best for the community
-- Show empathy towards other community members
+### **Be Respectful**
+- Treat all contributors with respect
+- Welcome newcomers
+- Provide constructive feedback
 
-### Enforcement
+### **Be Helpful**
+- Answer questions when you can
+- Share knowledge and experience
+- Help review pull requests
 
-- Unacceptable behavior will not be tolerated
-- Violations may result in temporary or permanent ban
-- Maintainers have the right to remove, edit, or reject contributions
+### **Be Patient**
+- Development takes time
+- Complex features require careful design
+- Quality is more important than speed
 
-## Getting Help
+## **Getting Help**
 
-### Resources
+### **Discussions**
+- Use GitHub Discussions for questions
+- Share ideas and proposals
+- Get help with implementation
 
-- **Documentation**: Check the [docs/](docs/) directory
-- **Issues**: Search existing [issues](https://github.com/Anthony4m/mars/issues)
-- **Discussions**: Use GitHub Discussions for questions
-- **Code**: Review existing code for examples
+### **Issues**
+- Use issues for bugs and feature requests
+- Provide detailed information
+- Be patient for responses
 
-### Communication
+## **Recognition**
 
-- **GitHub Issues**: For bugs and feature requests
-- **GitHub Discussions**: For questions and general discussion
-- **Pull Requests**: For code contributions
-- **Email**: For private or sensitive matters
+### **Contributors**
+- All contributors will be listed in CONTRIBUTORS.md
+- Significant contributions will be highlighted
+- We appreciate all levels of contribution
 
-## Recognition
+### **Hall of Fame**
+- Major feature implementations
+- Critical bug fixes
+- Outstanding documentation
 
-Contributors will be recognized in:
-
-- **README.md**: List of contributors
-- **Release notes**: Credit for significant contributions
-- **Documentation**: Attribution for major features
-- **Community**: Recognition in discussions and events
-
-## License
+## **License**
 
 By contributing to Mars, you agree that your contributions will be licensed under the MIT License.
 
 ---
 
-Thank you for contributing to Mars! Your contributions help make this language better for everyone. 
+Thank you for contributing to Mars! 
