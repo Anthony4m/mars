@@ -258,8 +258,8 @@ func TestBuiltinNow(t *testing.T) {
 }
 
 func TestBuiltinFunctionCall(t *testing.T) {
-	// Test that built-in functions can be called through the evaluator
-	_ = New() // Create evaluator to ensure built-ins are registered
+	// Test that builtin functions can be called through the evaluator
+	_ = New() // Create evaluator to ensure builtins are registered
 
 	tests := []struct {
 		name     string
@@ -290,8 +290,8 @@ func TestBuiltinFunctionCall(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a simple AST for the function call
-			// This is a simplified test - in practice, you'd parse the code
-			// For now, we'll test the built-in functions directly
+			// This is a simplified test  in practice, you'd parse the code
+			// For now, we'll test the builtin functions directly
 			if tt.name == "len function call" {
 				result := builtinLen([]Value{&StringValue{Value: "hello"}})
 				if result.String() != tt.expected {
