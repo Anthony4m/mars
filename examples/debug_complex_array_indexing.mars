@@ -1,0 +1,42 @@
+func test_array_index_addition() -> int {
+    nums := [1, 2, 3, 4];
+    if nums[0] + nums[1] == 3 {
+        return 1;
+    }
+    return 0;
+}
+
+func test_array_index_with_variable() -> int {
+    nums := [1, 2, 3, 4];
+    i := 0;
+    if nums[i] + nums[1] == 3 {
+        return 1;
+    }
+    return 0;
+}
+
+func test_nested_array_index() -> int {
+    nums := [1, 2, 3, 4];
+    if nums[0] == 1 {
+        if nums[1] == 2 {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+func main() {
+    println("Testing complex array indexing");
+    
+    result1 := test_array_index_addition();
+    println("Array index with addition: ");
+    println(result1);
+    
+    result2 := test_array_index_with_variable();
+    println("Array index with variable: ");
+    println(result2);
+    
+    result3 := test_nested_array_index();
+    println("Nested array index: ");
+    println(result3);
+} 

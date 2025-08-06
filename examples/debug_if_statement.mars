@@ -1,0 +1,6 @@
+func test_if(nums : []int) -> int {
+    if nums[0] == 1 {
+        return 1;
+    }
+    return 0;
+} 

@@ -1,0 +1,12 @@
+// Test exact error scenario
+
+func test_exact_error() -> int {
+    sum := 0;
+    nums := [1, 2, 3, 4, 5];
+    first := nums[0];
+    return [sum, first];
+}
+
+func main() {
+    log("test");
+} 

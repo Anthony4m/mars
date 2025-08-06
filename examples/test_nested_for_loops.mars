@@ -1,0 +1,31 @@
+func test_single_for(nums : []int) -> []int {
+    for i := 0; i < 4; i = i + 1 {
+        if nums[i] == 2 {
+            return [i, 0];
+        }
+    }
+    return [-1, -1];
+}
+
+func test_nested_for(nums : []int) -> []int {
+    for i := 0; i < 4; i = i + 1 {
+        for j := i + 1; j < 4; j = j + 1 {
+            if nums[i] == 2 {
+                return [i, j];
+            }
+        }
+    }
+    return [-1, -1];
+}
+
+func main() {
+    nums := [2, 7, 11, 15];
+    
+    result1 := test_single_for(nums);
+    println("Single for: ");
+    println(result1);
+    
+    result2 := test_nested_for(nums);
+    println("Nested for: ");
+    println(result2);
+} 

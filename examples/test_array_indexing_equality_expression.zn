@@ -1,0 +1,11 @@
+// Test array indexing and equality in expression
+
+func test_equality_expression() -> int {
+    nums := [1, 2, 3];
+    x := nums[0] == 1;
+    return x;
+}
+
+func main() {
+    log("test");
+} 

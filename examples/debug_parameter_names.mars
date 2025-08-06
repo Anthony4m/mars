@@ -1,0 +1,6 @@
+func test_names(nums : []int, target : int) -> []int {
+    if nums[0] + nums[1] == target {
+        return [0, 1];
+    }
+    return [-1, -1];
+} 

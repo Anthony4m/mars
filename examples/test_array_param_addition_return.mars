@@ -1,0 +1,25 @@
+func test_int_return(nums : []int) -> int {
+    if nums[0] + nums[1] == 9 {
+        return 1;
+    }
+    return 0;
+}
+
+func test_array_return(nums : []int) -> []int {
+    if nums[0] + nums[1] == 9 {
+        return [0, 1];
+    }
+    return [-1, -1];
+}
+
+func main() {
+    nums := [2, 7, 11, 15];
+    
+    result1 := test_int_return(nums);
+    println("Int return: ");
+    println(result1);
+    
+    result2 := test_array_return(nums);
+    println("Array return: ");
+    println(result2);
+} 

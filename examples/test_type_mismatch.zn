@@ -1,0 +1,12 @@
+// Test type mismatch - int return type with array return
+
+func test_type_mismatch() -> int {
+    sum := 0;
+    nums := [1, 2, 3, 4, 5];
+    first := nums[0];
+    return [sum, first]; // This should fail due to type mismatch
+}
+
+func main() {
+    log("test");
+} 

@@ -1,0 +1,26 @@
+func test_for_without_array() -> int {
+    for i := 0; i < 4; i = i + 1 {
+        if i == 2 {
+            return i;
+        }
+    }
+    return -1;
+}
+
+func test_array_without_for(nums : []int) -> int {
+    if nums[0] == 2 {
+        return 0;
+    }
+    return -1;
+}
+
+func main() {
+    result1 := test_for_without_array();
+    println("For without array: ");
+    println(result1);
+    
+    nums := [2, 7, 11, 15];
+    result2 := test_array_without_for(nums);
+    println("Array without for: ");
+    println(result2);
+} 

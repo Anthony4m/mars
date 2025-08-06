@@ -1,0 +1,39 @@
+// LeetCode-style problem: Fibonacci Number
+// Calculate the nth Fibonacci number using recursion
+
+func fibonacci(n : int) -> int {
+    if n <= 1 {
+        return n;
+    }
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+func fibonacci_iterative(n : int) -> int {
+    if n <= 1 {
+        return n;
+    }
+    
+    a := 0;
+    b := 1;
+    
+    for i := 2; i <= n; i = i + 1 {
+        temp := a + b;
+        a := b;
+        b := temp;
+    }
+    
+    return b;
+}
+
+func main() {
+    log("Fibonacci Sequence in Mars");
+    log("Recursive approach:");
+    log("fib(0) = ");
+    log(fibonacci(0));
+    log("fib(1) = ");
+    log(fibonacci(1));
+    log("fib(5) = ");
+    log(fibonacci(5));
+    log("fib(10) = ");
+    log(fibonacci(10));
+} 

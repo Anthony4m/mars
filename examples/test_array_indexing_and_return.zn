@@ -1,0 +1,11 @@
+// Test array indexing and array return types together
+
+func test_array_indexing_and_return(nums : []int) -> []int {
+    first := nums[0];
+    second := nums[1];
+    return [first, second];
+}
+
+func main() {
+    log("test");
+} 

@@ -1,0 +1,58 @@
+// Comprehensive Mars 1.0 Feature Test
+// Testing all the features we identified as needed for Two Sum
+
+func test_all_features() -> int {
+    // ✅ Test 1: Variable declarations inside functions
+    sum := 0;
+    x := 5;
+    y := 10;
+    
+    // ✅ Test 2: For loops with variable declarations
+    for i := 0; i < 5; i = i + 1 {
+        sum = sum + i;
+    }
+    
+    // ✅ Test 3: If statements inside functions
+    if x > 3 {
+        sum = sum + x;
+    }
+    
+    // ✅ Test 4: Array literals
+    nums := [1, 2, 3, 4, 5];
+    
+    // ❌ Test 5: Array indexing (likely to fail)
+    first := nums[0];
+    
+    // ❌ Test 6: Array return types (likely to fail)
+    return [sum, first];
+}
+
+func test_two_sum_brute_force(nums : []int, target : int) -> []int {
+    // ❌ This will fail due to array indexing and return types
+    for i := 0; i < len(nums); i = i + 1 {
+        for j := i + 1; j < len(nums); j = j + 1 {
+            if nums[i] + nums[j] == target {
+                return [i, j];
+            }
+        }
+    }
+    return [-1, -1];
+}
+
+func main() {
+    log("Comprehensive Mars 1.0 Feature Test");
+    
+    // Test basic features
+    result := test_all_features();
+    log("Basic features result: ");
+    log(result);
+    
+    log("Mars 1.0 Progress:");
+    log("✅ Variable declarations inside functions");
+    log("✅ For loops with variable declarations");
+    log("✅ If statements inside functions");
+    log("✅ Array literals");
+    log("❌ Array indexing");
+    log("❌ Array return types");
+    log("❌ Hash map support");
+} 

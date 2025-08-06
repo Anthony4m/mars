@@ -1,0 +1,50 @@
+// Test array indexing in if statements for Mars 1.0
+
+func test_array_indexing_in_if(nums : []int, target : int) -> []int {
+    // Test 1: Simple array indexing in if condition
+    if nums[0] + nums[1] == target {
+        return [0, 1];
+    }
+    
+    // Test 2: Array indexing with variable
+    i := 0;
+    if nums[i] + nums[1] == target {
+        return [i, 1];
+    }
+    
+    // Test 3: Array indexing in nested if
+    if nums[0] == 2 {
+        if nums[1] == 7 {
+            return [0, 1];
+        }
+    }
+    
+    return [-1, -1];
+}
+
+func test_simple_operations() -> int {
+    // Test basic operations work
+    a := 5;
+    b := 3;
+    if a + b == 8 {
+        return 1;
+    }
+    return 0;
+}
+
+func main() {
+    println("Testing array indexing in if statements");
+    
+    // Test basic operations first
+    result1 := test_simple_operations();
+    println("Basic operations test: ");
+    println(result1);
+    
+    // Test with array
+    nums := [2, 7, 11, 15];
+    target := 9;
+    
+    result2 := test_array_indexing_in_if(nums, target);
+    println("Array indexing test: ");
+    println(result2);
+} 

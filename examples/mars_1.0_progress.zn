@@ -1,0 +1,44 @@
+// Mars 1.0 Progress Test
+// Testing what we've fixed and what still needs work
+
+func test_variables_and_loops() -> int {
+    // ✅ Variable declarations inside functions - WORKING
+    sum := 0;
+    
+    // ✅ For loops with variable declarations - WORKING
+    for i := 0; i < 5; i = i + 1 {
+        sum = sum + i;
+    }
+    
+    return sum;
+}
+
+func test_if_statements() -> int {
+    // ❌ If statements inside functions - NEEDS FIX
+    x := 10;
+    if x > 5 {
+        return x;
+    }
+    return 0;
+}
+
+func test_array_operations() -> int {
+    // ❌ Array indexing - NEEDS FIX
+    nums := [1, 2, 3, 4, 5];
+    return nums[0]; // This will fail
+}
+
+func main() {
+    log("Mars 1.0 Progress Test");
+    
+    // ✅ Basic function calls - WORKING
+    result := test_variables_and_loops();
+    log("Sum from 0 to 4: ");
+    log(result);
+    
+    // ❌ If statements - NEEDS FIX
+    // test_if_statements();
+    
+    // ❌ Array operations - NEEDS FIX
+    // test_array_operations();
+} 

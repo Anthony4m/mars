@@ -1,0 +1,14 @@
+// Test variable declarations inside functions
+
+func test_variable_declaration() -> int {
+    x := 5;
+    y := 10;
+    return x + y;
+}
+
+func main() {
+    log("Testing variable declarations inside functions");
+    result := test_variable_declaration();
+    log("Result: ");
+    log(result);
+} 

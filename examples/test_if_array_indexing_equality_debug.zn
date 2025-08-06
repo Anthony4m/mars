@@ -1,0 +1,16 @@
+// Debug array indexing and equality in nested loops
+
+func test_array_indexing_equality_debug(nums : []int, target : int) -> []int {
+    for i := 0; i < len(nums); i = i + 1 {
+        for j := 0; j < len(nums); j = j + 1 {
+            if nums[i] == target {
+                return [i, j];
+            }
+        }
+    }
+    return [-1, -1];
+}
+
+func main() {
+    log("test");
+} 

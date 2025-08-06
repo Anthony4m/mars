@@ -1,0 +1,14 @@
+func test() -> []int {
+    nums := [1, 2, 3];
+    for i := 0; i < len(nums); i = i + 1 {
+        if true {
+            return [i, 0];
+        }
+    }
+    return [-1, -1];
+}
+
+func main() {
+    result := test();
+    println("Done");
+}

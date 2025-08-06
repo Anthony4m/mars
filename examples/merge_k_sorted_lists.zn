@@ -1,0 +1,164 @@
+// LeetCode 23: Merge k Sorted Lists
+// You are given an array of k linked-lists lists, each linked-list is sorted in ascending order.
+// Merge all the linked-lists into one sorted linked-list and return it.
+
+// Since Mars doesn't have built-in linked lists, we'll use arrays to represent them
+// Each array represents a sorted linked list
+
+// Helper function to find the minimum value and its index across all lists
+fn find_min_and_index(lists: [[int]], current_indices: [int]) -> (int, int) {
+    let mut min_val = 999999  // Use a large number as sentinel
+    let mut min_index = -1
+    
+    for i in 0..len(lists) {
+        if current_indices[i] < len(lists[i]) {
+            if lists[i][current_indices[i]] < min_val {
+                min_val = lists[i][current_indices[i]]
+                min_index = i
+            }
+        }
+    }
+    
+    return (min_val, min_index)
+}
+
+// Merge k sorted arrays (representing linked lists)
+fn merge_k_sorted_lists(lists: [[int]]) -> [int] {
+    if len(lists) == 0 {
+        return []
+    }
+    
+    if len(lists) == 1 {
+        return lists[0]
+    }
+    
+    // Calculate total size
+    let mut total_size = 0
+    for i in 0..len(lists) {
+        total_size = total_size + len(lists[i])
+    }
+    
+    // Initialize result array and current indices
+    let mut result = []
+    let mut current_indices = []
+    
+    // Initialize current_indices to 0 for all lists
+    for i in 0..len(lists) {
+        current_indices = current_indices + [0]
+    }
+    
+    // Merge step by step
+    for step in 0..total_size {
+        let (min_val, min_list_index) = find_min_and_index(lists, current_indices)
+        
+        if min_list_index == -1 {
+            break  // All lists are exhausted
+        }
+        
+        result = result + [min_val]
+        current_indices[min_list_index] = current_indices[min_list_index] + 1
+    }
+    
+    return result
+}
+
+// Alternative approach: Divide and Conquer (merge sort style)
+fn merge_two_sorted_arrays(arr1: [int], arr2: [int]) -> [int] {
+    let mut result = []
+    let mut i = 0
+    let mut j = 0
+    
+    while i < len(arr1) && j < len(arr2) {
+        if arr1[i] <= arr2[j] {
+            result = result + [arr1[i]]
+            i = i + 1
+        } else {
+            result = result + [arr2[j]]
+            j = j + 1
+        }
+    }
+    
+    // Add remaining elements from arr1
+    while i < len(arr1) {
+        result = result + [arr1[i]]
+        i = i + 1
+    }
+    
+    // Add remaining elements from arr2
+    while j < len(arr2) {
+        result = result + [arr2[j]]
+        j = j + 1
+    }
+    
+    return result
+}
+
+fn merge_k_sorted_lists_divide_conquer(lists: [[int]]) -> [int] {
+    if len(lists) == 0 {
+        return []
+    }
+    
+    if len(lists) == 1 {
+        return lists[0]
+    }
+    
+    if len(lists) == 2 {
+        return merge_two_sorted_arrays(lists[0], lists[1])
+    }
+    
+    // Divide into two halves
+    let mid = len(lists) / 2
+    let left_half = []
+    let right_half = []
+    
+    for i in 0..mid {
+        left_half = left_half + [lists[i]]
+    }
+    
+    for i in mid..len(lists) {
+        right_half = right_half + [lists[i]]
+    }
+    
+    // Recursively merge halves
+    let left_result = merge_k_sorted_lists_divide_conquer(left_half)
+    let right_result = merge_k_sorted_lists_divide_conquer(right_half)
+    
+    // Merge the two results
+    return merge_two_sorted_arrays(left_result, right_result)
+}
+
+fn main() {
+    // Test case 1: [[1,4,5],[1,3,4],[2,6]]
+    let lists1 = [[1, 4, 5], [1, 3, 4], [2, 6]]
+    let result1 = merge_k_sorted_lists(lists1)
+    log("Test 1 (Naive): ", result1)
+    
+    let result1_dc = merge_k_sorted_lists_divide_conquer(lists1)
+    log("Test 1 (Divide & Conquer): ", result1_dc)
+    
+    // Test case 2: [[1,2,3],[4,5,6],[7,8,9]]
+    let lists2 = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+    let result2 = merge_k_sorted_lists(lists2)
+    log("Test 2 (Naive): ", result2)
+    
+    let result2_dc = merge_k_sorted_lists_divide_conquer(lists2)
+    log("Test 2 (Divide & Conquer): ", result2_dc)
+    
+    // Test case 3: Empty lists
+    let lists3 = []
+    let result3 = merge_k_sorted_lists(lists3)
+    log("Test 3 (Empty): ", result3)
+    
+    // Test case 4: Single list
+    let lists4 = [[1, 2, 3]]
+    let result4 = merge_k_sorted_lists(lists4)
+    log("Test 4 (Single): ", result4)
+    
+    // Test case 5: [[1],[2],[3],[4],[5]]
+    let lists5 = [[1], [2], [3], [4], [5]]
+    let result5 = merge_k_sorted_lists(lists5)
+    log("Test 5 (Naive): ", result5)
+    
+    let result5_dc = merge_k_sorted_lists_divide_conquer(lists5)
+    log("Test 5 (Divide & Conquer): ", result5_dc)
+} 

@@ -1,0 +1,10 @@
+// Test len function
+
+func test_len_function(nums : []int) -> int {
+    length := len(nums);
+    return length;
+}
+
+func main() {
+    log("test");
+} 

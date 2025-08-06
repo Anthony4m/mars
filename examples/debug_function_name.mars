@@ -1,0 +1,6 @@
+func test_formatting(nums : []int, target : int) -> []int {
+    if nums[0] == 1 {
+        return [0, 1];
+    }
+    return [-1, -1];
+} 

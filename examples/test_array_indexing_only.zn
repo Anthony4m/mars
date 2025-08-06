@@ -1,0 +1,16 @@
+// Test array indexing only (no array return types)
+
+func test_array_indexing_only() -> int {
+    nums := [1, 2, 3, 4, 5];
+    first := nums[0];
+    second := nums[1];
+    sum := first + second;
+    return sum;
+}
+
+func main() {
+    log("Testing array indexing only");
+    result := test_array_indexing_only();
+    log("Result: ");
+    log(result);
+} 

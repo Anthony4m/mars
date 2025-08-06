@@ -1,0 +1,14 @@
+// Test simple array indexing
+
+func test_array_indexing() -> int {
+    nums := [1, 2, 3];
+    first := nums[0];
+    return first;
+}
+
+func main() {
+    log("Testing array indexing");
+    result := test_array_indexing();
+    log("Result: ");
+    log(result);
+} 

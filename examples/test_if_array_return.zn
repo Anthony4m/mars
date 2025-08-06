@@ -1,0 +1,12 @@
+// Test if statement with array return
+
+func test_if_array_return(nums : []int, target : int) -> []int {
+    if nums[0] + nums[1] == target {
+        return [0, 1];
+    }
+    return [-1, -1];
+}
+
+func main() {
+    log("test");
+} 

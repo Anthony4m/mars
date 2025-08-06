@@ -1,0 +1,23 @@
+func test_array_param(nums : []int) -> int {
+    x := nums[0];
+    return x;
+}
+
+func test_array_param_in_if(nums : []int) -> int {
+    if nums[0] == 1 {
+        return 1;
+    }
+    return 0;
+}
+
+func main() {
+    nums := [1, 2, 3];
+    
+    result1 := test_array_param(nums);
+    println("Array param: ");
+    println(result1);
+    
+    result2 := test_array_param_in_if(nums);
+    println("Array param in if: ");
+    println(result2);
+} 

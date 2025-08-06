@@ -1,0 +1,12 @@
+// Debug if statement with array parameters and array indexing
+
+func test_array_params_debug(nums : []int) -> int {
+    if nums[0] == 1 {
+        return 1;
+    }
+    return 0;
+}
+
+func main() {
+    log("test");
+} 

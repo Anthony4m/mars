@@ -1,0 +1,9 @@
+// Debug test for parsing issues
+
+func simple() -> int {
+    return 5;
+}
+
+func main() {
+    log("test");
+} 

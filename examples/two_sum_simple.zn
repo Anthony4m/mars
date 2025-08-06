@@ -1,0 +1,20 @@
+// LeetCode 1: Two Sum - Simple Mars Implementation
+// Demonstrating the Two Sum algorithm concept
+
+func check_sum(a : int, b : int, target : int) -> bool {
+    return a + b == target;
+}
+
+func main() {
+    log("LeetCode 1: Two Sum in Mars");
+    log("Testing if 2 + 7 == 9: ");
+    log(check_sum(2, 7, 9));
+    
+    log("Testing if 2 + 7 == 10: ");
+    log(check_sum(2, 7, 10));
+    
+    log("Testing if 11 + 15 == 26: ");
+    log(check_sum(11, 15, 26));
+    
+    log("Two Sum concept: find two numbers that add to target!");
+} 

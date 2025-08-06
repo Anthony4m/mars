@@ -1,0 +1,16 @@
+// Test nested loops with if statements
+
+func test_nested_loops_with_if(nums : []int, target : int) -> []int {
+    for i := 0; i < len(nums); i = i + 1 {
+        for j := i + 1; j < len(nums); j = j + 1 {
+            if nums[i] + nums[j] == target {
+                return [i, j];
+            }
+        }
+    }
+    return [-1, -1];
+}
+
+func main() {
+    log("test");
+} 

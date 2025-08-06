@@ -1,0 +1,26 @@
+func test_variable_array_index(nums : []int) -> []int {
+    i := 0;
+    if nums[i] + nums[1] == 9 {
+        return [i, 1];
+    }
+    return [-1, -1];
+}
+
+func test_literal_array_index(nums : []int) -> []int {
+    if nums[0] + nums[1] == 9 {
+        return [0, 1];
+    }
+    return [-1, -1];
+}
+
+func main() {
+    nums := [2, 7, 11, 15];
+    
+    result1 := test_literal_array_index(nums);
+    println("Literal array index: ");
+    println(result1);
+    
+    result2 := test_variable_array_index(nums);
+    println("Variable array index: ");
+    println(result2);
+} 

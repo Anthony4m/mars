@@ -1,0 +1,16 @@
+func twoSum(nums : []int, target : int) -> []int {
+    for i := 0; i < 2; i = i + 1 {
+        for j := i + 1; j < 2; j = j + 1 {
+            sum := nums[i] + nums[j];
+            if sum == target {
+                return [i, j];
+            }
+        }
+    }
+    return [-1, -1];
+}
+
+func main() {
+    result := twoSum([1, 2], 3);
+    println("Done");
+}

@@ -1,0 +1,12 @@
+// Test simple for loop
+
+func test_for_simple() -> int {
+    for i := 0; i < 3; i = i + 1 {
+        return i;
+    }
+    return 0;
+}
+
+func main() {
+    log("Testing simple for loop");
+} 

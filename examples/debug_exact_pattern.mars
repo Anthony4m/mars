@@ -1,0 +1,14 @@
+func test_formatting(nums : []int, target : int) -> []int {
+    if nums[0] + nums[1] == target {
+        return [0, 1];
+    }
+    return [-1, -1];
+}
+
+func main() {
+    nums := [2, 7, 11, 15];
+    target := 9;
+    result := test_formatting(nums, target);
+    println("Result: ");
+    println(result);
+} 

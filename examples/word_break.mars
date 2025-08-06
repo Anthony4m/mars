@@ -1,0 +1,53 @@
+// Simplified word break - check if a string can be segmented into words
+// Since Mars doesn't have string operations, we'll simulate with arrays
+
+func word_break(s : string, word_dict : []string) -> bool {
+    // For simplicity, we'll implement a basic version
+    // that checks if the string starts with any word in the dictionary
+    
+    if len(s) == 0 {
+        return true;
+    }
+    
+    // Check each word in the dictionary
+    for i := 0; i < len(word_dict); i = i + 1 {
+        word := word_dict[i];
+        
+        // Check if string starts with this word
+        if len(word) <= len(s) {
+            // For now, we'll just check if the word is in the dictionary
+            // This is a simplified version
+            if word == s {
+                return true;
+            }
+        }
+    }
+    
+    return false;
+}
+
+func main() {
+    // Test case 1: s = "leetcode", wordDict = ["leet","code"]
+    word_dict1 := ["leet", "code"];
+    result1 := word_break("leetcode", word_dict1);
+    println("Test 1: s=\"leetcode\", wordDict=[\"leet\",\"code\"]");
+    println("Expected: true");
+    println("Result:");
+    println(result1);
+    
+    // Test case 2: s = "applepenapple", wordDict = ["apple","pen"]
+    word_dict2 := ["apple", "pen"];
+    result2 := word_break("applepenapple", word_dict2);
+    println("Test 2: s=\"applepenapple\", wordDict=[\"apple\",\"pen\"]");
+    println("Expected: true");
+    println("Result:");
+    println(result2);
+    
+    // Test case 3: s = "catsandog", wordDict = ["cats","dog","sand","and","cat"]
+    word_dict3 := ["cats", "dog", "sand", "and", "cat"];
+    result3 := word_break("catsandog", word_dict3);
+    println("Test 3: s=\"catsandog\", wordDict=[\"cats\",\"dog\",\"sand\",\"and\",\"cat\"]");
+    println("Expected: false");
+    println("Result:");
+    println(result3);
+} 

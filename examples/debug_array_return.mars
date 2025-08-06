@@ -1,0 +1,6 @@
+func test_array_return(nums : []int) -> []int {
+    if nums[0] == 1 {
+        return [0, 1];
+    }
+    return [-1, -1];
+} 

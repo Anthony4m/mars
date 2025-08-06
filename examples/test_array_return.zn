@@ -1,0 +1,12 @@
+// Test array return types
+
+func test_array_return() -> []int {
+    return [1, 2, 3];
+}
+
+func main() {
+    log("Testing array return types");
+    result := test_array_return();
+    log("Result: ");
+    log(result);
+} 

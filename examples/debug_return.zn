@@ -1,0 +1,7 @@
+func test() -> int {
+    return 5;
+}
+
+func main() {
+    log("test");
+} 

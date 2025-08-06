@@ -1,0 +1,29 @@
+func test_simple_equality(nums : []int) -> []int {
+    for i := 0; i < 4; i = i + 1 {
+        if nums[i] == 2 {
+            return [i, 0];
+        }
+    }
+    return [-1, -1];
+}
+
+func test_addition_equality(nums : []int) -> []int {
+    for i := 0; i < 4; i = i + 1 {
+        if nums[i] + nums[0] == 4 {
+            return [i, 0];
+        }
+    }
+    return [-1, -1];
+}
+
+func main() {
+    nums := [2, 7, 11, 15];
+    
+    result1 := test_simple_equality(nums);
+    println("Simple equality: ");
+    println(result1);
+    
+    result2 := test_addition_equality(nums);
+    println("Addition equality: ");
+    println(result2);
+} 

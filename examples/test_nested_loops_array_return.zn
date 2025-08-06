@@ -1,0 +1,14 @@
+// Test nested loops with array return types
+
+func test_nested_loops_array_return(nums : []int) -> []int {
+    for i := 0; i < 3; i = i + 1 {
+        for j := 0; j < 3; j = j + 1 {
+            return [i, j];
+        }
+    }
+    return [-1, -1];
+}
+
+func main() {
+    log("test");
+} 

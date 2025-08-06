@@ -1,0 +1,11 @@
+// Debug array indexing issue
+
+func test_debug() -> int {
+    nums := [1, 2, 3];
+    first := nums[0];
+    return first;
+}
+
+func main() {
+    log("test");
+} 

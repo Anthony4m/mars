@@ -1,0 +1,10 @@
+// Test variable declarations inside functions - matching debug structure
+
+func test_variable_declaration() -> int {
+    x := 5;
+    return x;
+}
+
+func main() {
+    log("test");
+} 

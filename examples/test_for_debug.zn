@@ -1,0 +1,12 @@
+// Debug for loop parsing
+
+func test_for_debug() -> int {
+    for i := 0; i < 3; i = i + 1 {
+        return i;
+    }
+    return 0;
+}
+
+func main() {
+    log("test");
+} 

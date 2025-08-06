@@ -1,0 +1,18 @@
+func test_exact_pattern(nums : []int, target : int) -> []int {
+    for i := 0; i < 4; i = i + 1 {
+        for j := i + 1; j < 4; j = j + 1 {
+            if nums[i] + nums[j] == target {
+                return [i, j];
+            }
+        }
+    }
+    return [-1, -1];
+}
+
+func main() {
+    nums := [2, 7, 11, 15];
+    target := 9;
+    result := test_exact_pattern(nums, target);
+    println("Result: ");
+    println(result);
+} 

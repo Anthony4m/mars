@@ -1,0 +1,16 @@
+// Debug nested loops with if statements
+
+func test_nested_loops_debug(nums : []int) -> []int {
+    for i := 0; i < 3; i = i + 1 {
+        for j := 0; j < 3; j = j + 1 {
+            if nums[0] == 1 {
+                return [i, j];
+            }
+        }
+    }
+    return [-1, -1];
+}
+
+func main() {
+    log("test");
+} 

@@ -1,0 +1,18 @@
+// Test variable declarations in different contexts
+
+func test_var_context() -> int {
+    // Test 1: Simple variable declaration
+    x := 5;
+    
+    // Test 2: Variable declaration with expression
+    y := x + 1;
+    
+    return y;
+}
+
+func main() {
+    log("Testing variable context");
+    result := test_var_context();
+    log("Result: ");
+    log(result);
+} 

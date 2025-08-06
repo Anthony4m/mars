@@ -1,0 +1,14 @@
+// Test nested loops with simple return
+
+func test_nested_loops_simple(nums : []int) -> int {
+    for i := 0; i < 3; i = i + 1 {
+        for j := 0; j < 3; j = j + 1 {
+            return 5;
+        }
+    }
+    return 0;
+}
+
+func main() {
+    log("test");
+} 
