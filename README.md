@@ -171,36 +171,36 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Implementation Status
 
-### ✅ **Fully Implemented (Mars 1.0)**
+### **Fully Implemented (Mars 1.0)**
 
 **Core Language Features:**
-- ✅ **Lexer**: Complete token recognition for all language constructs
-- ✅ **Parser**: Full recursive descent implementation with error recovery
-- ✅ **AST**: Complete node definitions with position tracking
-- ✅ **Error Reporting**: Structured error system with user-friendly messages, context, and line/column info
-- ✅ **Basic Types**: `int`, `float`, `string`, `bool`, `null`
-- ✅ **Variable Declarations**: Type inference and explicit typing with `:=` syntax
-- ✅ **Mutable Variables**: `mut` keyword for reassignable variables
-- ✅ **Arithmetic Operations**: `+`, `-`, `*`, `/`, `%`
-- ✅ **Comparison Operations**: `==`, `!=`, `<`, `>`, `<=`, `>=`
-- ✅ **Logical Operations**: `&&`, `||`, `!`
-- ✅ **Control Flow**: `if`/`else`, `for` loops, `while` loops, `break`/`continue`
-- ✅ **Functions**: Declaration, parameters, return types, automatic `main()` execution
-- ✅ **Function Calls**: User-defined function execution
-- ✅ **Built-in Functions**: `len()`, `println()`, `print()`
-- ✅ **Block Statements**: Nested scopes and variable shadowing
-- ✅ **Type System**: Advanced type checking with compatibility and aliases
-- ✅ **Array Types**: Fixed-size and dynamic arrays with full support
-- ✅ **Array Indexing**: Complete `array[index]` access support
-- ✅ **Array Return Types**: Functions can return arrays and nested arrays
+- **Lexer**: Complete token recognition for all language constructs
+- **Parser**: Full recursive descent implementation with error recovery
+- **AST**: Complete node definitions with position tracking
+- **Error Reporting**: Structured error system with user-friendly messages, context, and line/column info
+- **Basic Types**: `int`, `float`, `string`, `bool`, `null`
+- **Variable Declarations**: Type inference and explicit typing with `:=` syntax
+- **Mutable Variables**: `mut` keyword for reassignable variables
+- **Arithmetic Operations**: `+`, `-`, `*`, `/`, `%`
+- **Comparison Operations**: `==`, `!=`, `<`, `>`, `<=`, `>=`
+- **Logical Operations**: `&&`, `||`, `!`
+- **Control Flow**: `if`/`else`, `for` loops, `while` loops, `break`/`continue`
+- **Functions**: Declaration, parameters, return types, automatic `main()` execution
+- **Function Calls**: User-defined function execution
+- **Built-in Functions**: `len()`, `println()`, `print()`
+- **Block Statements**: Nested scopes and variable shadowing
+- **Type System**: Advanced type checking with compatibility and aliases
+- **Array Types**: Fixed-size and dynamic arrays with full support
+- **Array Indexing**: Complete `array[index]` access support
+- **Array Return Types**: Functions can return arrays and nested arrays
 
 **Advanced Features:**
-- ✅ **Algorithmic Problem Solving**: Full support for complex algorithms
-- ✅ **Dynamic Programming**: Kadane's algorithm and similar patterns
-- ✅ **Greedy Algorithms**: Stock trading and optimization problems
-- ✅ **Array Processing**: Complex array operations and manipulation
-- ✅ **Error Handling**: Comprehensive error reporting with user-friendly messages and debugging
-- ✅ **Testing**: Extensive test suite with real-world problem validation
+- **Algorithmic Problem Solving**: Full support for complex algorithms
+- **Dynamic Programming**: Kadane's algorithm and similar patterns
+- **Greedy Algorithms**: Stock trading and optimization problems
+- **Array Processing**: Complex array operations and manipulation
+- **Error Handling**: Comprehensive error reporting with user-friendly messages and debugging
+- **Testing**: Extensive test suite with real-world problem validation
 
 ### **What's Next (Mars 1.1+)**
 

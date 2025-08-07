@@ -32,9 +32,9 @@ func two_sum(nums : []int, target : int) -> []int {
 ```
 
 **Test Results**:
-- `[2,7,11,15], target=9` → `[0, 1]` ✅
-- `[3,2,4], target=6` → `[1, 2]` ✅
-- `[3,3], target=6` → `[0, 1]` ✅
+- `[2,7,11,15], target=9` → `[0, 1]`
+- `[3,2,4], target=6` → `[1, 2]`
+- `[3,3], target=6` → `[0, 1]`
 
 #### **2. Three Sum**
 - **Problem**: Find all unique triplets that sum to zero
@@ -61,9 +61,9 @@ func three_sum(nums : []int) -> [][]int {
 ```
 
 **Test Results**:
-- `[-1,0,1,2,-1,-4]` → `[[-1, 0, 1]]` ✅
-- `[0,1,1]` → `[[]]` (no solution) ✅
-- `[0,0,0]` → `[[0, 0, 0]]` ✅
+- `[-1,0,1,2,-1,-4]` → `[[-1, 0, 1]]`
+- `[0,1,1]` → `[[]]` (no solution)
+- `[0,0,0]` → `[[0, 0, 0]]`
 
 #### **3. Trapping Rain Water**
 - **Problem**: Calculate how much water can be trapped between bars
@@ -92,10 +92,10 @@ func trap(height : []int) -> int {
 ```
 
 **Test Results**:
-- `[0,1,0,2,1,0,1,3,2,1,2,1]` → `6` ✅
-- `[4,2,0,3,2,5]` → `9` ✅
-- `[2,0,2]` → `2` ✅
-- `[1,2,3,4,5]` → `0` ✅
+- `[0,1,0,2,1,0,1,3,2,1,2,1]` → `6`
+- `[4,2,0,3,2,5]` → `9`
+- `[2,0,2]` → `2`
+- `[1,2,3,4,5]` → `0`
 
 #### **4. Binary Search**
 - **Problem**: Find target element in sorted array
@@ -126,9 +126,9 @@ func binary_search(nums : []int, target : int) -> int {
 ```
 
 **Test Results**:
-- `[1,3,5,7,9,11,13,15], target=7` → `3` ✅
-- `[1,3,5,7,9,11,13,15], target=10` → `-1` ✅
-- `[1,3,5,7,9,11,13,15], target=1` → `0` ✅
+- `[1,3,5,7,9,11,13,15], target=7` → `3`
+- `[1,3,5,7,9,11,13,15], target=10` → `-1`
+- `[1,3,5,7,9,11,13,15], target=1` → `0`
 
 ### **Hard Problems**
 
@@ -160,10 +160,10 @@ func max_subarray(nums : []int) -> int {
 ```
 
 **Test Results**:
-- `[-2,1,-3,4,-1,2,1,-5,4]` → `6` ✅
-- `[1]` → `1` ✅
-- `[5,4,-1,7,8]` → `23` ✅
-- `[-1,-2,-3,-4]` → `-1` ✅
+- `[-2,1,-3,4,-1,2,1,-5,4]` → `6`
+- `[1]` → `1`
+- `[5,4,-1,7,8]` → `23`
+- `[-1,-2,-3,-4]` → `-1`
 
 #### **6. Best Time to Buy and Sell Stock III**
 - **Problem**: Maximum profit with at most two transactions
@@ -201,10 +201,10 @@ func max_profit(prices : []int) -> int {
 ```
 
 **Test Results**:
-- `[3,3,5,0,0,3,1,4]` → `6` ✅
-- `[1,2,3,4,5]` → `3` (close to expected 4) ✅
-- `[7,6,4,3,1]` → `0` ✅
-- `[1]` → `0` ✅
+- `[3,3,5,0,0,3,1,4]` → `6`
+- `[1,2,3,4,5]` → `3` (close to expected 4)
+- `[7,6,4,3,1]` → `0`
+- `[1]` → `0`
 
 #### **7. Median of Two Sorted Arrays**
 - **Problem**: Find median of two sorted arrays with O(log(min(m,n))) complexity
@@ -261,8 +261,8 @@ func findMedianSortedArray(nums1: []int, nums2: []int) -> float {
 ```
 
 **Test Results**:
-- `[1,3,5], [2,4,6]` → `3.5` (even total length) ✅
-- `[1,2], [3,4,5]` → `3` (odd total length) ✅
+- `[1,3,5], [2,4,6]` → `3.5` (even total length)
+- `[1,2], [3,4,5]` → `3` (odd total length)
 
 ## **Algorithmic Patterns Demonstrated**
 
