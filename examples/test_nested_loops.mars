@@ -1,0 +1,31 @@
+func test_single_loop(nums : []int, target : int) -> []int {
+    for i := 0; i < 4; i = i + 1 {
+        if nums[i] == target {
+            return [i, 0];
+        }
+    }
+    return [-1, -1];
+}
+
+func test_nested_loops(nums : []int, target : int) -> []int {
+    for i := 0; i < 4; i = i + 1 {
+        for j := i + 1; j < 4; j = j + 1 {
+            if nums[i] == target {
+                return [i, j];
+            }
+        }
+    }
+    return [-1, -1];
+}
+
+func main() {
+    nums := [1, 2, 3, 4];
+    for i := 0; i < len(nums); i = i + 1 {
+        for j := i + 1; j < len(nums); j = j + 1 {
+            if nums[i] + nums[j] == 5 {
+                println(i);
+                println(j);
+            }
+        }
+    }
+} 

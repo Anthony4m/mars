@@ -1,0 +1,16 @@
+// Test exact failing structure
+
+func test_exact_failing_structure(nums : []int, target : int) -> []int {
+    for i := 0; i < len(nums); i = i + 1 {
+        for j := i + 1; j < len(nums); j = j + 1 {
+            if nums[i] + nums[j] == target {
+                return [i, j];
+            }
+        }
+    }
+    return [-1, -1];
+}
+
+func main() {
+    log("test");
+} 

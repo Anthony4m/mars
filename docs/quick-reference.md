@@ -1,407 +1,440 @@
-# Mars Compiler Quick Reference
+# Mars Language Quick Reference
 
-## Common Patterns
+A concise reference for the Mars programming language, showing what's implemented and working.
 
-### 1. Adding Position Tracking to AST Nodes
+## Language Status: **Core Features Complete** ✅
 
-```go
-// When creating any AST node, always set the position
-node := &ast.VarDecl{
-    Name: &ast.Identifier{
-        Name:     "x",
-        Position: ast.Position{Line: 1, Column: 1},
-    },
-    Type: &ast.Type{BaseType: "int"},
-    Position: ast.Position{Line: 1, Column: 1},
+Mars has a solid foundation with all core language features working. The language can execute basic programs with variables, functions, control flow, and output.
+
+## Core Syntax
+
+### Variables
+
+```mars
+// Type inference (recommended)
+x := 42;
+name := "Mars";
+isActive := true;
+
+// Explicit types
+count : int = 0;
+temperature : float = 98.6;
+
+// Mutable variables
+mut counter := 0;
+counter = 1;  // OK - mutable
+```
+
+### Functions
+
+```mars
+// Function declaration
+func add(a: int, b: int) -> int {
+    return a + b;
+}
+
+// Function call
+result := add(5, 3);
+log(result);
+```
+
+### Control Flow
+
+```mars
+// If statements
+if x > 10 {
+    log("x is greater than 10");
+} else {
+    log("x is 10 or less");
+}
+
+// For loops
+for i := 0; i < 5; i = i + 1 {
+    log(i);
+}
+
+// Break and continue
+for i := 0; i < 10; i = i + 1 {
+    if i == 5 {
+        break;
+    }
+    if i == 2 {
+        continue;
+    }
+    log(i);
 }
 ```
 
-### 2. Error Reporting Pattern
+### Built-in Functions
 
-```go
-// Always use the MarsReporter for consistent error handling
-a.errors.AddErrorWithHelp(
-    node.Pos(),
-    errors.ErrCodeTypeError,
-    "type mismatch: expected int, got string",
-    "cast the value or change the variable type",
-)
+```mars
+// Output functions (fully implemented)
+log("Hello, World!");
+print("No newline");
+println("With newline");
+printf("Value: %s", "test");
+
+// Array functions
+let arr := [1, 2, 3];
+let length := len(arr);
+let newArr := append(arr, 4);
+
+// Math functions
+let sine := sin(0);
+let cosine := cos(0);
+let root := sqrt(16);
+
+// Time function
+let currentTime := now();
 ```
 
-### 3. Type Compatibility Checking
+## Data Types
 
-```go
-// Use the typesCompatible method for all type comparisons
-if !a.typesCompatible(expectedType, actualType) {
-    // Handle type mismatch
+### Basic Types ✅ **Working**
+
+```mars
+// Integer
+x : int = 42;
+y := 100;
+
+// Float
+pi : float = 3.14159;
+temp := 98.6;
+
+// String
+name : string = "Mars";
+message := "Hello, World!";
+
+// Boolean
+isActive : bool = true;
+enabled := false;
+
+// Null
+empty := null;
+```
+
+### Complex Types ✅ **Working (Structs beta)**
+
+```mars
+// Array types (parsed, not evaluated)
+numbers : [5]int = [1, 2, 3, 4, 5];
+dynamic := [1, 2, 3, 4, 5];
+
+// Struct types
+struct Point {
+    x: int;
+    y: int;
 }
 
-// For function types, use functionSignaturesCompatible
-if expected.IsFunctionType() && actual.IsFunctionType() {
-    if !a.functionSignaturesCompatible(
-        expected.GetFunctionSignature(),
-        actual.GetFunctionSignature(),
-    ) {
-        // Handle function type mismatch
-    }
-}
+point := Point{x: 1, y: 2}; // struct literal
+v := point.x;               // field access (runtime)
+
+// Pointer types (parsed, not evaluated)
+ptr : *int;
 ```
 
-### 4. Symbol Table Usage
+## Operators
 
-```go
-// Define a symbol
-err := a.symbols.Define(name, type, mutable, isFunction, declaredAt)
+### Arithmetic ✅ **Working**
 
-// Resolve a symbol
-symbol, exists := a.symbols.Resolve(name)
-
-// Enter/exit scopes
-a.symbols.EnterScope()
-defer a.symbols.ExitScope()
+```mars
+a := 10 + 5;    // 15
+b := 10 - 5;    // 5
+c := 10 * 5;    // 50
+d := 10 / 5;    // 2
+e := 10 % 3;    // 1
 ```
 
-## Code Examples
+### Comparison ✅ **Working**
 
-### 1. Parsing a Variable Declaration
-
-```go
-func (p *Parser) parseVarDecl() *ast.VarDecl {
-    pos := p.curToken.Position
-    
-    // Check for 'mut' keyword
-    mutable := false
-    if p.curToken.Type == lexer.MUT {
-        mutable = true
-        p.nextToken()
-    }
-    
-    // Parse identifier
-    name := &ast.Identifier{
-        Name:     p.curToken.Literal,
-        Position: p.curToken.Position,
-    }
-    p.nextToken()
-    
-    // Parse type (if present)
-    var varType *ast.Type
-    if p.curToken.Type == lexer.COLON {
-        p.nextToken()
-        varType = p.parseType()
-    }
-    
-    // Parse value (if present)
-    var value ast.Expression
-    if p.curToken.Type == lexer.ASSIGN {
-        p.nextToken()
-        value = p.parseExpression(LOWEST)
-    }
-    
-    return &ast.VarDecl{
-        Mutable:  mutable,
-        Name:     name,
-        Type:     varType,
-        Value:    value,
-        Position: pos,
-    }
-}
+```mars
+a := 5 == 5;    // true
+b := 5 != 3;    // true
+c := 5 > 3;     // true
+d := 5 >= 5;    // true
+e := 3 < 5;     // true
+f := 5 <= 5;    // true
 ```
 
-### 2. Type Checking a Function Call
+### Logical ✅ **Working**
 
-```go
-func (a *Analyzer) checkFunctionCall(call *ast.FunctionCall) *ast.Type {
-    // Check function expression
-    funcType := a.checkExpression(call.Function)
-    if funcType == nil {
-        return nil
-    }
-    
-    // Ensure it's a function type
-    if !funcType.IsFunctionType() {
-        a.errors.AddError(
-            call.Position,
-            errors.ErrCodeTypeError,
-            fmt.Sprintf("cannot call non-function type %s", funcType.String()),
-        )
-        return nil
-    }
-    
-    signature := funcType.GetFunctionSignature()
-    
-    // Check argument count
-    if len(call.Arguments) != len(signature.Parameters) {
-        a.errors.AddError(
-            call.Position,
-            errors.ErrCodeTypeError,
-            fmt.Sprintf("function expects %d arguments, got %d",
-                len(signature.Parameters), len(call.Arguments)),
-        )
-        return nil
-    }
-    
-    // Check argument types
-    for i, arg := range call.Arguments {
-        argType := a.checkExpression(arg)
-        if argType == nil {
-            continue
-        }
-        
-        expectedType := signature.Parameters[i].Type
-        if !a.typesCompatible(expectedType, argType) {
-            a.errors.AddError(
-                arg.Pos(),
-                errors.ErrCodeTypeError,
-                fmt.Sprintf("argument %d: expected %s, got %s",
-                    i+1, expectedType.String(), argType.String()),
-            )
-        }
-    }
-    
-    return signature.ReturnType
+```mars
+a := true && true;   // true
+b := true || false;  // true
+c := !false;         // true
+```
+
+### Assignment ✅ **Working**
+
+```mars
+mut x := 10;
+x = 20;  // Assignment to mutable variable
+```
+
+## Control Structures
+
+### If Statements ✅ **Working**
+
+```mars
+if condition {
+    // code
+} else if other_condition {
+    // code
+} else {
+    // code
 }
 ```
 
-### 3. Creating Function Types
+### For Loops ✅ **Working**
 
-```go
-// Create a function type from parameters and return type
-func createFunctionType(params []*ast.Parameter, returnType *ast.Type) *ast.Type {
-    signature := &ast.FunctionSignature{
-        Parameters: params,
-        ReturnType: returnType,
-    }
-    return ast.NewFunctionType(signature)
+```mars
+// C-style for loop
+for init; condition; post {
+    // code
 }
 
-// Example usage
-funcType := createFunctionType(
-    []*ast.Parameter{
-        {Name: &ast.Identifier{Name: "x"}, Type: ast.NewBaseType("int")},
-        {Name: &ast.Identifier{Name: "y"}, Type: ast.NewBaseType("int")},
-    },
-    ast.NewBaseType("int"),
-)
-```
-
-## Troubleshooting
-
-### 1. Common Parser Errors
-
-**Problem**: "unexpected token" errors
-```go
-// Solution: Check token precedence and lookahead
-if p.peekToken.Type == lexer.SEMICOLON {
-    p.nextToken() // Consume semicolon
+// Example
+for i := 0; i < 5; i = i + 1 {
+    log(i);
 }
 ```
 
-**Problem**: Missing position information
-```go
-// Solution: Always set position when creating nodes
-node.Position = p.curToken.Position
-```
+### Break/Continue ✅ **Working**
 
-### 2. Type Checking Issues
-
-**Problem**: Type inference not working
-```go
-// Solution: Check literal type mapping
-func (a *Analyzer) inferType(expr ast.Expression) *ast.Type {
-    switch e := expr.(type) {
-    case *ast.Literal:
-        switch e.Value.(type) {
-        case int, int64:
-            return ast.NewBaseType("int")
-        case float64:
-            return ast.NewBaseType("float")
-        case string:
-            return ast.NewBaseType("string")
-        case bool:
-            return ast.NewBaseType("bool")
-        }
+```mars
+for i := 0; i < 10; i = i + 1 {
+    if i == 5 {
+        break;  // Exit loop
     }
-    return ast.NewBaseType("unknown")
+    if i == 2 {
+        continue;  // Skip iteration
+    }
+    log(i);
 }
 ```
 
-**Problem**: Function type compatibility failing
-```go
-// Solution: Ensure function signatures are properly compared
-func (a *Analyzer) functionSignaturesCompatible(expected, actual *ast.FunctionSignature) bool {
-    if expected == nil || actual == nil {
-        return false
-    }
-    
-    // Check parameter count
-    if len(expected.Parameters) != len(actual.Parameters) {
-        return false
-    }
-    
-    // Check parameter types
-    for i, expectedParam := range expected.Parameters {
-        actualParam := actual.Parameters[i]
-        if !a.typesCompatible(expectedParam.Type, actualParam.Type) {
-            return false
-        }
-    }
-    
-    // Check return type
-    if expected.ReturnType == nil && actual.ReturnType == nil {
-        return true
-    }
-    if expected.ReturnType == nil || actual.ReturnType == nil {
-        return false
-    }
-    
-    return a.typesCompatible(expected.ReturnType, actual.ReturnType)
+## Functions
+
+### Function Declaration ✅ **Working**
+
+```mars
+func functionName(param1: type1, param2: type2) -> returnType {
+    // function body
+    return value;
 }
 ```
 
-### 3. Symbol Table Issues
+### Function Calls ✅ **Working**
 
-**Problem**: Variables not found in scope
-```go
-// Solution: Check scope management
-a.symbols.EnterScope()
-// ... add symbols ...
-defer a.symbols.ExitScope() // Always exit scope
+```mars
+result := functionName(arg1, arg2);
 ```
 
-**Problem**: Duplicate declaration errors
-```go
-// Solution: Check if symbol already exists
-if existing, _ := a.symbols.Resolve(name); existing != nil {
-    a.errors.AddError(
-        pos,
-        errors.ErrCodeDuplicateDecl,
-        fmt.Sprintf("'%s' is already declared in this scope", name),
-    )
+### Closures ✅ **Working**
+
+```mars
+func createCounter() -> func() -> int {
+    mut count := 0;
+    return func() -> int {
+        count = count + 1;
+        return count;
+    };
 }
 ```
 
-## Testing Patterns
+## Blocks and Scoping ✅ **Working**
 
-### 1. Parser Test Structure
-
-```go
-func TestVariableDeclaration(t *testing.T) {
-    tests := []struct {
-        input              string
-        expectedIdentifier string
-        expectedType       string
-        expectedValue      interface{}
-    }{
-        {"x := 5;", "x", "", 5},
-        {"x : int = 5;", "x", "int", 5},
-        {"mut y := 10.5;", "y", "", 10.5},
+```mars
+{
+    x := 10;
+    {
+        y := 20;
+        log(x + y);  // 30
     }
-    
-    for _, tt := range tests {
-        l := lexer.New(tt.input)
-        p := NewParser(l)
-        program := p.ParseProgram()
-        checkParserErrors(t, p)
-        
-        if len(program.Declarations) != 1 {
-            t.Fatalf("expected 1 declaration, got %d", len(program.Declarations))
-        }
-        
-        stmt := program.Declarations[0]
-        if !testVariableDeclaration(t, stmt, tt.expectedIdentifier, tt.expectedType, tt.expectedValue) {
-            return
-        }
-    }
+    // y is not accessible here
 }
 ```
 
-### 2. Type Checker Test Structure
+## Error Handling ✅ **Working**
 
-```go
-func TestTypeCompatibility(t *testing.T) {
-    tests := []struct {
-        expected *ast.Type
-        actual   *ast.Type
-        shouldBe bool
-    }{
-        {ast.NewBaseType("int"), ast.NewBaseType("int"), true},
-        {ast.NewBaseType("int"), ast.NewBaseType("string"), false},
+```mars
+// Runtime errors are caught and reported
+func divide(a: int, b: int) -> int {
+    if b == 0 {
+        log("Error: Division by zero");
+        return 0;
     }
-    
-    analyzer := New("", "")
-    
-    for _, tt := range tests {
-        result := analyzer.typesCompatible(tt.expected, tt.actual)
-        if result != tt.shouldBe {
-            t.Errorf("typesCompatible(%s, %s) = %t, want %t",
-                tt.expected.String(), tt.actual.String(), result, tt.shouldBe)
-        }
-    }
+    return a / b;
 }
 ```
 
-## Performance Tips
+## What's Not Working Yet
 
-### 1. AST Construction
-- Reuse position structs when possible
-- Use string interning for identifiers
-- Minimize allocations in hot paths
+### Array Operations 🔄 **Parsed, Not Evaluated**
 
-### 2. Type Checking
-- Cache type inference results
-- Use efficient type comparison
-- Avoid repeated symbol lookups
-
-### 3. Error Reporting
-- Collect errors in batches
-- Use efficient string formatting
-- Minimize position struct copying
-
-## Debugging
-
-### 1. Enable Debug Logging
-```go
-// Add debug prints to track execution
-fmt.Printf("Parsing declaration at line %d\n", p.curToken.Position.Line)
+```mars
+// These are parsed but not evaluated at runtime
+numbers := [1, 2, 3, 4, 5];
+first := numbers[0];
+slice := numbers[1:3];
 ```
 
-### 2. AST Visualization
-```go
-// Print AST structure for debugging
-func printAST(node ast.Node, indent int) {
-    prefix := strings.Repeat("  ", indent)
-    fmt.Printf("%s%T: %s\n", prefix, node, node.String())
-    
-    // Recursively print children
-    switch n := node.(type) {
-    case *ast.Program:
-        for _, decl := range n.Declarations {
-            printAST(decl, indent+1)
-        }
-    case *ast.BlockStatement:
-        for _, stmt := range n.Statements {
-            printAST(stmt, indent+1)
-        }
-    }
+### Struct Operations ✅ **Working (beta)**
+
+```mars
+// Struct declarations, literals, and field access are supported
+struct Person {
+    name: string;
+    age: int;
+}
+
+person := Person{name: "Alice", age: 30};
+name := person.name; // "Alice"
+```
+
+### Unsafe Blocks 🔄 **Parsed, Not Evaluated**
+
+```mars
+// These are parsed but not evaluated at runtime
+unsafe {
+    ptr := alloc(int);
+    *ptr = 42;
+    value := *ptr;
+    free(ptr);
 }
 ```
 
-### 3. Token Stream Debugging
-```go
-// Print token stream for debugging
-func debugTokens(input string) {
-    l := lexer.New(input)
-    for {
-        tok := l.NextToken()
-        fmt.Printf("Token: %s '%s' at %d:%d\n",
-            tok.Type.String(), tok.Literal, tok.Position.Line, tok.Position.Column)
-        if tok.Type == lexer.EOF {
-            break
-        }
+### Built-in Functions ✅ **Working**
+
+```mars
+// Output functions
+log("Hello");           // ✅ Working
+print("No newline");    // ✅ Working
+println("With newline"); // ✅ Working
+printf("Value: %s", "test"); // ✅ Working
+
+// Type conversion functions
+let num := toInt("42");     // ✅ Working
+let float := toFloat("3.14"); // ✅ Working
+let str := toString(42);    // ✅ Working
+let type := getType("hello"); // ✅ Working
+
+// Type checking functions
+let isInt := isInt(42);     // ✅ Working
+let isFloat := isFloat(3.14); // ✅ Working
+let isString := isString("hello"); // ✅ Working
+let isArray := isArray([1, 2, 3]); // ✅ Working
+let isBool := isBool(true); // ✅ Working
+
+// Array functions
+let arr := [1, 2, 3];
+let length := len(arr);     // ✅ Working
+let newArr := append(arr, 4); // ✅ Working
+push(arr, 5);              // ✅ Working
+let popped := pop(arr);     // ✅ Working
+reverse(arr);              // ✅ Working
+let joined := join(arr, ", "); // ✅ Working
+
+// Math functions
+let sine := sin(0);         // ✅ Working
+let cosine := cos(0);       // ✅ Working
+let root := sqrt(16);       // ✅ Working
+let power := pow(2, 3);     // ✅ Working (2^3 = 8)
+let floor := floor(3.7);    // ✅ Working (3.7 → 3)
+let ceiling := ceil(3.2);   // ✅ Working (3.2 → 4)
+let absolute := abs(-5);    // ✅ Working
+let minimum := min(3, 7);   // ✅ Working
+let maximum := max(3, 7);   // ✅ Working
+
+// Time function
+let currentTime := now();   // ✅ Working
+
+// String and array slicing
+let str := "Hello, Mars!";
+let slice1 := str[0:5];     // ✅ Working ("Hello")
+let slice2 := str[:5];      // ✅ Working ("Hello")
+let slice3 := str[7:];      // ✅ Working ("Mars!")
+let slice4 := str[-6:-1];   // ✅ Working ("Mars")
+
+let arr := [1, 2, 3, 4, 5];
+let arrSlice1 := arr[1:4];  // ✅ Working ([2, 3, 4])
+let arrSlice2 := arr[:3];   // ✅ Working ([1, 2, 3])
+let arrSlice3 := arr[2:];   // ✅ Working ([3, 4, 5])
+let arrSlice4 := arr[-3:-1]; // ✅ Working ([3, 4])
+
+// String indexing
+let char := str[0];         // ✅ Working ("H")
+let arrElem := arr[2];      // ✅ Working (3)
+
+// Array assignment
+arr[0] = 10;               // ✅ Working
+```
+
+## Testing Your Code
+
+### Using the Test Runner
+
+```bash
+# Test a simple program
+go run cmd/test_errors/main.go
+
+# Test with a file
+go run cmd/test_errors/main.go your_program.mars
+```
+
+### Example Working Program
+
+```mars
+func main() {
+    mut sum := 0;
+    for i := 1; i <= 10; i = i + 1 {
+        sum = sum + i;
     }
+    log("Sum of 1 to 10 is:");
+    log(sum);
 }
 ```
 
----
+## Error Messages
 
-*This quick reference provides common patterns and solutions for Mars compiler development. For detailed architecture information, see [technical-architecture.md](./technical-architecture.md).* 
+Mars provides clear error messages with line and column information:
+
+```
+error[E0001]: unexpected token EOF in expression
+          --> line 1, column 6
+```
+
+## Next Steps
+
+1. **Try the examples** in this reference
+2. **Check the test suite** in `evaluator/evaluator_test.go` for more examples
+3. **Contribute** to implement missing features like array/struct runtime support
+
+### Want to Contribute?
+
+If you're interested in contributing to Mars, check out our [Contributing Guide](../CONTRIBUTING.md) for:
+
+- Development setup instructions
+- Coding standards and guidelines
+- Current development priorities
+- How to submit pull requests
+- Good first issues for beginners
+
+## Implementation Status Summary
+
+- ✅ **Core Language**: Variables, functions, control flow, operators
+- ✅ **Runtime**: AST evaluation, environment management, error handling
+- ✅ **Built-ins**: Comprehensive set of 25+ functions including:
+  - Output: `log()`, `print()`, `println()`, `printf()`
+  - Type conversion: `toInt()`, `toFloat()`, `toString()`, `getType()`
+  - Type checking: `isInt()`, `isFloat()`, `isString()`, `isArray()`, `isBool()`
+  - Array operations: `len()`, `append()`, `push()`, `pop()`, `reverse()`, `join()`
+  - Math: `sin()`, `cos()`, `sqrt()`, `pow()`, `floor()`, `ceil()`, `abs()`, `min()`, `max()`
+  - Time: `now()`
+- ✅ **String & Array Operations**: Indexing, slicing, assignment
+- ✅ **Comments**: Single-line (`//`) and multi-line (`/* */`)
+- 🔄 **Data Structures**: Parsed but not evaluated
+- 🔄 **Advanced Features**: Unsafe blocks, member access
+- 📋 **Tooling**: CLI compiler, REPL, code generation
+
+**Current Status**: Feature-rich programming language ready for real-world tasks with comprehensive built-in library. 

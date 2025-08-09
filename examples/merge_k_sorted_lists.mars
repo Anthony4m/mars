@@ -1,0 +1,91 @@
+// Note: Since Mars doesn't have linked lists, we'll simulate with arrays
+// Each "list" is represented as an array, and we'll merge them in pairs
+
+func merge_two_sorted_arrays(arr1 : []int, arr2 : []int) -> []int {
+    // Since Mars doesn't have dynamic arrays, we'll use a fixed-size approach
+    // For simplicity, we'll assume the result fits in a reasonable size
+    mut result := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; // Fixed size array
+    mut result_index := 0;
+    mut i := 0;
+    mut j := 0;
+    
+    // Merge while both arrays have elements
+    for i < len(arr1) && j < len(arr2) {
+        if arr1[i] <= arr2[j] {
+            result[result_index] = arr1[i];
+            result_index = result_index + 1;
+            i = i + 1;
+        } else {
+            result[result_index] = arr2[j];
+            result_index = result_index + 1;
+            j = j + 1;
+        }
+    }
+    
+    // Add remaining elements from arr1
+    for i < len(arr1) {
+        result[result_index] = arr1[i];
+        result_index = result_index + 1;
+        i = i + 1;
+    }
+    
+    // Add remaining elements from arr2
+    for j < len(arr2) {
+        result[result_index] = arr2[j];
+        result_index = result_index + 1;
+        j = j + 1;
+    }
+    
+    // Return only the used portion
+    mut final_result := [];
+    for k := 0; k < result_index; k = k + 1 {
+        final_result = final_result + [result[k]];
+    }
+    
+    return final_result;
+}
+
+func merge_k_sorted_lists(lists : [][]int) -> []int {
+    if len(lists) == 0 {
+        return [];
+    }
+    
+    if len(lists) == 1 {
+        return lists[0];
+    }
+    
+    // Merge lists in pairs (divide and conquer approach)
+    mut merged := lists[0];
+    
+    for i := 1; i < len(lists); i = i + 1 {
+        merged = merge_two_sorted_arrays(merged, lists[i]);
+    }
+    
+    return merged;
+}
+
+func main() {
+    // Test case 1: [[1,4,5],[1,3,4],[2,6]]
+    lists1 := [[1, 4, 5], [1, 3, 4], [2, 6]];
+    result1 := merge_k_sorted_lists(lists1);
+    println("Test 1: [[1,4,5],[1,3,4],[2,6]]");
+    println("Expected: [1,1,2,3,4,4,5,6]");
+    println("Result:");
+    println(result1);
+    
+    // Test case 2: [[1,2,3],[4,5,6],[7,8,9]]
+    lists2 := [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
+    result2 := merge_k_sorted_lists(lists2);
+    println("Test 2: [[1,2,3],[4,5,6],[7,8,9]]");
+    println("Expected: [1,2,3,4,5,6,7,8,9]");
+    println("Result:");
+    println(result2);
+    
+    // Test case 3: Empty lists
+    lists3 := [];
+    result3 := merge_k_sorted_lists(lists3);
+    println("Test 3: []");
+    println("Expected: []");
+    println("Result:");
+    println(result3);
+} 

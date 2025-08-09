@@ -1,0 +1,51 @@
+// LeetCode 1: Two Sum - Full Implementation
+// This will help identify what Mars 1.0 needs to implement
+
+// Attempt 1: Using arrays and loops (likely to fail)
+func two_sum(nums : []int, target : int) -> []int {
+    for i := 0; i < len(nums); i = i + 1 {
+        for j := i + 1; j < len(nums); j = j + 1 {
+            if nums[i] + nums[j] == target {
+                return [i, j];
+            }
+        }
+    }
+    return [-1, -1]; // No solution found
+}
+
+// Attempt 2: Using hash map approach (likely to fail)
+func two_sum_hashmap(nums : []int, target : int) -> []int {
+    seen := {}; // Hash map
+    
+    for i := 0; i < len(nums); i = i + 1 {
+        complement := target - nums[i];
+        if seen[complement] {
+            return [seen[complement], i];
+        }
+        seen[nums[i]] = i;
+    }
+    return [-1, -1];
+}
+
+// Attempt 3: Simple function calls (should work)
+func check_pair(a : int, b : int, target : int) -> bool {
+    return a + b == target;
+}
+
+func main() {
+    log("LeetCode 1: Two Sum - Testing Mars Features");
+    
+    // Test case 1: [2,7,11,15], target = 9
+    log("Test 1: [2,7,11,15], target = 9");
+    log("Expected: [0,1]");
+    
+    // Test case 2: [3,2,4], target = 6  
+    log("Test 2: [3,2,4], target = 6");
+    log("Expected: [1,2]");
+    
+    // Test case 3: [3,3], target = 6
+    log("Test 3: [3,3], target = 6");
+    log("Expected: [0,1]");
+    
+    log("This will help identify missing Mars 1.0 features!");
+} 

@@ -19,9 +19,11 @@ const (
 	FLOAT_TYPE    = "FLOAT"
 	BREAK_TYPE    = "BREAK"
 	CONTINUE_TYPE = "CONTINUE"
+	ARRAY_TYPE    = "ARRAY"
+	STRUCT_TYPE   = "STRUCT"
 )
 
-// Value interface - all runtime values implement this
+// Value interface  all runtime values implement this
 type Value interface {
 	Type() string
 	String() string
@@ -109,6 +111,8 @@ type FunctionValue struct {
 	ReturnType *ast.Type
 	Env        *Environment // For closure support
 	Position   ast.Position
+	IsBuiltin  bool                     // True if this is a builtin function
+	BuiltinFn  func(args []Value) Value // Builtin function implementation
 }
 
 func (fv *FunctionValue) String() string {
@@ -133,6 +137,47 @@ func (fv *FunctionValue) Type() string {
 func (fv *FunctionValue) IsTruthy() bool {
 	return true
 }
+
+// ArrayValue represents array values
+type ArrayValue struct {
+	Elements []Value
+}
+
+func (a *ArrayValue) Type() string { return ARRAY_TYPE }
+func (a *ArrayValue) String() string {
+	var elements []string
+	for _, elem := range a.Elements {
+		elements = append(elements, elem.String())
+	}
+	return "[" + strings.Join(elements, ", ") + "]"
+}
+func (a *ArrayValue) IsTruthy() bool { return len(a.Elements) > 0 }
+
+// StructValue represents a struct instance at runtime
+type StructValue struct {
+	TypeName string
+	Fields   map[string]Value
+}
+
+func (s *StructValue) Type() string { return STRUCT_TYPE }
+func (s *StructValue) String() string {
+	var b bytes.Buffer
+	b.WriteString(s.TypeName)
+	b.WriteString("{")
+	first := true
+	for k, v := range s.Fields {
+		if !first {
+			b.WriteString(", ")
+		}
+		first = false
+		b.WriteString(k)
+		b.WriteString(": ")
+		b.WriteString(v.String())
+	}
+	b.WriteString("}")
+	return b.String()
+}
+func (s *StructValue) IsTruthy() bool { return true }
 
 func (i *BreakValue) Type() string   { return BREAK_TYPE }
 func (i *BreakValue) String() string { return fmt.Sprintf("%d", i.Value) }

@@ -1,0 +1,51 @@
+// Target Two Sum Implementation for Mars 1.0
+// This shows what the language should support
+
+// Target Implementation 1: Brute Force (O(n²))
+func two_sum_brute_force(nums : []int, target : int) -> []int {
+    for i := 0; i < len(nums); i = i + 1 {
+        for j := i + 1; j < len(nums); j = j + 1 {
+            if nums[i] + nums[j] == target {
+                return [i, j];
+            }
+        }
+    }
+    return [-1, -1]; // No solution found
+}
+
+// Target Implementation 2: Hash Map (O(n))
+func two_sum_hashmap(nums : []int, target : int) -> []int {
+    seen := {}; // Hash map to store seen numbers
+    
+    for i := 0; i < len(nums); i = i + 1 {
+        complement := target - nums[i];
+        if seen[complement] {
+            return [seen[complement], i];
+        }
+        seen[nums[i]] = i;
+    }
+    return [-1, -1]; // No solution found
+}
+
+// Current Working Implementation (Limited)
+func check_sum(a : int, b : int, target : int) -> bool {
+    return a + b == target;
+}
+
+func main() {
+    log("Two Sum - Current vs Target Implementation");
+    log("Current: Can only check if two numbers sum to target");
+    log("Target: Full array processing with loops and data structures");
+    
+    // Current working code
+    log("Current check: 2 + 7 == 9: ");
+    log(check_sum(2, 7, 9));
+    
+    log("Mars 1.0 Target Features Needed:");
+    log("1. Variable declarations inside functions");
+    log("2. For loops with proper syntax");
+    log("3. Array indexing (nums[i])");
+    log("4. Array return types");
+    log("5. Hash map support");
+    log("6. If statements inside functions");
+} 

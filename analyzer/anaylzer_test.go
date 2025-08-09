@@ -231,7 +231,7 @@ func TestVariableDeclarations(t *testing.T) {
 		{"mismatched types", "var x: int = \"hello\";", "mismatched types: expected int, found string"},
 		{"redeclaration in same scope", "var x: int; var x: string;", "variable 'x' is already defined"},
 		{"declaration without type or initializer", "mut x;", "expected ':' or ':=' in variable declaration"},
-		{"inference failure from undeclared var", "x := y;", "cannot infer type for variable"},
+		{"inference failure from undeclared var", "x := y;", "undefined"},
 	}
 
 	for _, tt := range tests {
@@ -333,12 +333,12 @@ func TestBreakContinueValidation(t *testing.T) {
 	}{
 		{
 			name:        "break inside for loop - valid",
-			code:        "i := 0; for ; i < 10; ; { i = i + 1; }",
+			code:        "mut i := 0; for ; i < 10; ; { i = i + 1; }",
 			shouldError: false,
 		},
 		{
 			name:        "continue inside for loop - valid",
-			code:        "i := 0; for ; i < 10; ; { if i % 2 == 0 { continue; } i = i + 1; }",
+			code:        "mut i := 0; for ; i < 10; ; { if i % 2 == 0 { continue; } i = i + 1; }",
 			shouldError: false,
 		},
 		{

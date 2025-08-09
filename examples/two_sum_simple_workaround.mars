@@ -1,0 +1,22 @@
+func twoSum(nums : []int, target : int) -> []int {
+    // Use simple variable assignments to avoid the parser bug
+    for i := 0; i < len(nums); i = i + 1 {
+        for j := i + 1; j < len(nums); j = j + 1 {
+            // Store values in variables first
+            val1 := nums[i];
+            val2 := nums[j];
+            sum := val1 + val2;
+            // Use simple equality check
+            if sum == target {
+                return [i, j];
+            }
+        }
+    }
+    return [-1, -1];
+}
+
+func main() {
+    // Test with simple case
+    result := twoSum([2, 7, 11, 15], 9);
+    println("Result: ", result[0], ", ", result[1]);
+} 

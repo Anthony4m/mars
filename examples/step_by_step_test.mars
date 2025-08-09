@@ -1,0 +1,33 @@
+func test_step1(nums : []int) -> int {
+    return 1;
+}
+
+func test_step2(nums : []int) -> int {
+    if nums[0] == 1 {
+        return 1;
+    }
+    return 0;
+}
+
+func test_step3(nums : []int) -> int {
+    if nums[0] + nums[1] == 3 {
+        return 1;
+    }
+    return 0;
+}
+
+func main() {
+    nums := [1, 2, 3];
+    
+    result1 := test_step1(nums);
+    println("Step 1 (simple): ");
+    println(result1);
+    
+    result2 := test_step2(nums);
+    println("Step 2 (array index in if): ");
+    println(result2);
+    
+    result3 := test_step3(nums);
+    println("Step 3 (array index addition in if): ");
+    println(result3);
+} 

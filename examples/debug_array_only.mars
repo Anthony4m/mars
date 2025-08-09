@@ -1,0 +1,6 @@
+func test_array() -> int {
+    if nums[0] {
+        return 0;
+    }
+    return 1;
+} 

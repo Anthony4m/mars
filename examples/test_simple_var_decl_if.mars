@@ -1,0 +1,8 @@
+func test() {
+    if true {
+        x := 5;
+    }
+}
+
+func main() {
+}

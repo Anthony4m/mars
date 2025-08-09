@@ -1,0 +1,16 @@
+// Debug len function in nested loops with if statements
+
+func test_len_function_debug(nums : []int) -> []int {
+    for i := 0; i < len(nums); i = i + 1 {
+        for j := 0; j < len(nums); j = j + 1 {
+            if nums[0] == 1 {
+                return [i, j];
+            }
+        }
+    }
+    return [-1, -1];
+}
+
+func main() {
+    log("test");
+} 

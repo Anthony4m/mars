@@ -1,0 +1,76 @@
+func test_basic_while() {
+    println("=== Basic While Loop ===");
+    mut count := 0;
+    while count < 3 {
+        println("Count:");
+        println(count);
+        count = count + 1;
+    }
+}
+
+func test_while_with_break() {
+    println("=== While with Break ===");
+    mut i := 0;
+    while true {
+        if i >= 5 {
+            break;
+        }
+        println("i:");
+        println(i);
+        i = i + 1;
+    }
+}
+
+func test_while_with_continue() {
+    println("=== While with Continue ===");
+    mut j := 0;
+    while j < 6 {
+        if j == 2 || j == 4 {
+            println("Skipping:");
+            println(j);
+            j = j + 1;
+            continue;
+        }
+        println("Processing:");
+        println(j);
+        j = j + 1;
+    }
+}
+
+func test_while_with_return() {
+    println("=== While with Return ===");
+    mut k := 0;
+    while k < 10 {
+        if k == 7 {
+            println("Found 7, returning!");
+            return;
+        }
+        k = k + 1;
+    }
+    println("Loop completed without finding 7");
+}
+
+func test_nested_while() {
+    println("=== Nested While Loops ===");
+    mut outer := 0;
+    while outer < 3 {
+        println("Outer:");
+        println(outer);
+        mut inner := 0;
+        while inner < 2 {
+            println("  Inner:");
+            println(inner);
+            inner = inner + 1;
+        }
+        outer = outer + 1;
+    }
+}
+
+func main() {
+    test_basic_while();
+    test_while_with_break();
+    test_while_with_continue();
+    test_while_with_return();
+    test_nested_while();
+    println("=== All While Loop Tests Complete ===");
+} 

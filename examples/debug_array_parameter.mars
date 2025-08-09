@@ -1,0 +1,27 @@
+func test_array_parameter(nums : []int) -> int {
+    if nums[0] == 1 {
+        return 1;
+    }
+    return 0;
+}
+
+func test_local_array() -> int {
+    nums := [1, 2, 3];
+    if nums[0] == 1 {
+        return 1;
+    }
+    return 0;
+}
+
+func main() {
+    println("Testing array parameters vs local arrays");
+    
+    result1 := test_local_array();
+    println("Local array indexing: ");
+    println(result1);
+    
+    nums := [1, 2, 3];
+    result2 := test_array_parameter(nums);
+    println("Array parameter indexing: ");
+    println(result2);
+} 

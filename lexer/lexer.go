@@ -166,6 +166,10 @@ func (l *Lexer) NextToken() Token {
 			tok.Type = COMMENT
 			tok.Literal = l.readBlockComment()
 			return tok
+		} else if l.peekChar() == '/' {
+			tok.Type = COMMENT
+			tok.Literal = l.readLineComment()
+			return tok
 		}
 		tok.Type = SLASH
 		tok.Literal = string(l.ch)
@@ -265,6 +269,19 @@ func (l *Lexer) NextToken() Token {
 	}
 }
 
+// PeekTokenN returns the N-th upcoming token without consuming any input.
+// n = 1 returns the next token that would be produced by NextToken(),
+// n = 2 returns the token after that, and so on.
+func (l *Lexer) PeekTokenN(n int) Token {
+	// Make a shallow copy of the lexer state so advancing doesn't affect the original
+	clone := *l
+	var tok Token
+	for i := 0; i < n; i++ {
+		tok = clone.NextToken()
+	}
+	return tok
+}
+
 // readIdentifier reads an identifier or keyword
 func (l *Lexer) readIdentifier() string {
 	var identifier []rune
@@ -330,7 +347,7 @@ func isDigit(ch rune) bool {
 // readBlockComment reads a block comment /* ... */
 func (l *Lexer) readBlockComment() string {
 	position := l.position
-	nestLevel := 1 // Start with nesting level 1 for the initial /*
+	nestLevel := 1
 
 	// Skip the opening /*
 	l.readChar() // Skip '/'
@@ -360,6 +377,21 @@ func (l *Lexer) readBlockComment() string {
 			}
 			l.readChar()
 		}
+	}
+	return l.input[position:l.position]
+}
+
+// readLineComment reads a single-line comment // ...
+func (l *Lexer) readLineComment() string {
+	position := l.position
+
+	// Skip the opening //
+	l.readChar() // Skip '/'
+	l.readChar() // Skip '/'
+
+	// Read until end of line or EOF
+	for l.ch != '\n' && l.ch != 0 {
+		l.readChar()
 	}
 
 	return l.input[position:l.position]

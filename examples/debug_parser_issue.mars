@@ -1,0 +1,11 @@
+func test_simple() -> int {
+    nums := [1, 2, 3];
+    x := nums[0];
+    return x;
+}
+
+func main() {
+    result := test_simple();
+    println("Result: ");
+    println(result);
+} 

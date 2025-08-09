@@ -1,0 +1,13 @@
+func test() {
+    nums := [1, 2];
+    for i := 0; i < 1; i = i + 1 {
+        for j := 0; j < 1; j = j + 1 {
+            target := 2;
+            if nums[i] + nums[j] == target {
+            }
+        }
+    }
+}
+
+func main() {
+}

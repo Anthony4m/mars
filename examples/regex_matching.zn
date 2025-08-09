@@ -1,0 +1,114 @@
+// LeetCode 10: Regular Expression Matching
+// Given an input string s and a pattern p, implement regular expression matching
+// with support for '.' and '*' where:
+// '.' Matches any single character
+// '*' Matches zero or more of the preceding element
+
+// Dynamic Programming approach
+fn is_match(s: str, p: str) -> bool {
+    let s_len = len(s)
+    let p_len = len(p)
+    
+    // Create DP table: dp[i][j] = true if s[0..i] matches p[0..j]
+    let mut dp = []
+    
+    // Initialize dp table with false
+    for i in 0..(s_len + 1) {
+        let mut row = []
+        for j in 0..(p_len + 1) {
+            row = row + [false]
+        }
+        dp = dp + [row]
+    }
+    
+    // Empty pattern matches empty string
+    dp[0][0] = true
+    
+    // Handle patterns like a*, a*b*, a*b*c*
+    for j in 1..(p_len + 1) {
+        if p[j-1] == '*' {
+            dp[0][j] = dp[0][j-2]
+        }
+    }
+    
+    // Fill the dp table
+    for i in 1..(s_len + 1) {
+        for j in 1..(p_len + 1) {
+            if p[j-1] == '.' || p[j-1] == s[i-1] {
+                dp[i][j] = dp[i-1][j-1]
+            } else if p[j-1] == '*' {
+                dp[i][j] = dp[i][j-2]  // zero occurrence
+                
+                if p[j-2] == '.' || p[j-2] == s[i-1] {
+                    dp[i][j] = dp[i][j] || dp[i-1][j]
+                }
+            }
+        }
+    }
+    
+    return dp[s_len][p_len]
+}
+
+// Alternative recursive approach (less efficient but clearer)
+fn is_match_recursive(s: str, p: str) -> bool {
+    if len(p) == 0 {
+        return len(s) == 0
+    }
+    
+    let first_match = len(s) > 0 && (p[0] == s[0] || p[0] == '.')
+    
+    if len(p) >= 2 && p[1] == '*' {
+        return is_match_recursive(s, p[2:]) || (first_match && is_match_recursive(s[1:], p))
+    } else {
+        return first_match && is_match_recursive(s[1:], p[1:])
+    }
+}
+
+fn main() {
+    // Test cases
+    let test_cases = [
+        ("aa", "a", false),
+        ("aa", "a*", true),
+        ("ab", ".*", true),
+        ("aab", "c*a*b", true),
+        ("mississippi", "mis*is*p*.", false),
+        ("", "", true),
+        ("", "a*", true),
+        ("a", "", false),
+        ("aaa", "a*a", true),
+        ("aaa", "ab*a*c*a", true)
+    ]
+    
+    for i in 0..len(test_cases) {
+        let (s, p, expected) = test_cases[i]
+        let result_dp = is_match(s, p)
+        let result_rec = is_match_recursive(s, p)
+        
+        log("Test ", i + 1, ": s='", s, "', p='", p, "'")
+        log("  Expected: ", expected)
+        log("  DP Result: ", result_dp)
+        log("  Recursive Result: ", result_rec)
+        log("  DP Correct: ", result_dp == expected)
+        log("  Recursive Correct: ", result_rec == expected)
+        log("")
+    }
+    
+    // Additional edge cases
+    log("=== Edge Cases ===")
+    
+    // Test with multiple stars
+    let result1 = is_match("aaaa", "a*")
+    log("'aaaa' matches 'a*': ", result1)
+    
+    // Test with dots and stars
+    let result2 = is_match("ab", ".*")
+    log("'ab' matches '.*': ", result2)
+    
+    // Test with complex pattern
+    let result3 = is_match("aab", "c*a*b")
+    log("'aab' matches 'c*a*b': ", result3)
+    
+    // Test with no match
+    let result4 = is_match("mississippi", "mis*is*p*.")
+    log("'mississippi' matches 'mis*is*p*.': ", result4)
+} 

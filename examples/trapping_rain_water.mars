@@ -1,0 +1,69 @@
+func trap(height : []int) -> int {
+    // If array has less than 3 elements, no water can be trapped
+    if len(height) < 3 {
+        return 0;
+    }
+    
+    mut total_water := 0;
+    
+    // For each position, find the maximum height to the left and right
+    for i := 1; i < len(height) - 1; i = i + 1 {
+        // Find max height to the left
+        mut max_left := height[0];
+        for j := 1; j < i; j = j + 1 {
+            if height[j] > max_left {
+                max_left = height[j];
+            }
+        }
+        
+        // Find max height to the right
+        mut max_right := height[i + 1];
+        for j := i + 2; j < len(height); j = j + 1 {
+            if height[j] > max_right {
+                max_right = height[j];
+            }
+        }
+        
+        // Water trapped at this position is min(max_left, max_right) - height[i]
+        mut min_height := max_left;
+        if max_right < max_left {
+            min_height = max_right;
+        }
+        
+        if min_height > height[i] {
+            total_water = total_water + (min_height - height[i]);
+        }
+    }
+    
+    return total_water;
+}
+
+func main() {
+    // Test case 1: [0,1,0,2,1,0,1,3,2,1,2,1]
+    result1 := trap([0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]);
+    println("Test 1: [0,1,0,2,1,0,1,3,2,1,2,1]");
+    println("Expected: 6");
+    println("Result:");
+    println(result1);
+    
+    // Test case 2: [4,2,0,3,2,5]
+    result2 := trap([4, 2, 0, 3, 2, 5]);
+    println("Test 2: [4,2,0,3,2,5]");
+    println("Expected: 9");
+    println("Result:");
+    println(result2);
+    
+    // Test case 3: [2,0,2]
+    result3 := trap([2, 0, 2]);
+    println("Test 3: [2,0,2]");
+    println("Expected: 2");
+    println("Result:");
+    println(result3);
+    
+    // Test case 4: [1,2,3,4,5] (no water trapped)
+    result4 := trap([1, 2, 3, 4, 5]);
+    println("Test 4: [1,2,3,4,5]");
+    println("Expected: 0");
+    println("Result:");
+    println(result4);
+} 

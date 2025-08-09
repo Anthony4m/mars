@@ -1,0 +1,13 @@
+// Debug token advancement in if statements
+
+func test_debug_tokens() -> int {
+    nums := [1, 2, 3];
+    if nums[0] == 1 {
+        return 1;
+    }
+    return 0;
+}
+
+func main() {
+    log("test");
+} 

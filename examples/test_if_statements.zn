@@ -1,0 +1,16 @@
+// Test if statements inside functions
+
+func test_if_statements() -> int {
+    x := 10;
+    if x > 5 {
+        return x;
+    }
+    return 0;
+}
+
+func main() {
+    log("Testing if statements");
+    result := test_if_statements();
+    log("Result: ");
+    log(result);
+} 

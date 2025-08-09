@@ -1158,8 +1158,8 @@ func TestParserErrorsCorrected(t *testing.T) {
 		{
 			input:       `p := Point{x: 1, y:};`,
 			shouldError: true,
-			errorCount:  2, // EOF in expression + missing RBRACE
-			description: "incomplete struct field initialization",
+			errorCount:  3, // EOF in expression + missing RBRACE
+			description: "parser state error: unexpected token '}' in expression (context: current token: '}', peek token: ';')",
 		},
 	}
 

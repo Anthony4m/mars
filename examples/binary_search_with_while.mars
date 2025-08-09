@@ -1,0 +1,36 @@
+func binary_search(nums : []int, target : int) -> int {
+    mut left := 0;
+    mut right := len(nums) - 1;
+    
+    while left <= right {
+        mid := (left + right) / 2;
+        if nums[mid] == target {
+            return mid;
+        } else if nums[mid] < target {
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
+    }
+    return -1;
+}
+
+func main() {
+    nums := [1, 3, 5, 7, 9, 11, 13, 15];
+    
+    // Test cases
+    target1 := 7;
+    result1 := binary_search(nums, target1);
+    println("Searching for 7:");
+    println(result1);
+    
+    target2 := 10;
+    result2 := binary_search(nums, target2);
+    println("Searching for 10:");
+    println(result2);
+    
+    target3 := 1;
+    result3 := binary_search(nums, target3);
+    println("Searching for 1:");
+    println(result3);
+} 

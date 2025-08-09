@@ -1,0 +1,111 @@
+// Advanced Three Sum solution in Mars 1.0
+// Demonstrates multiple approaches and Mars 1.0 capabilities
+
+func three_sum_optimized(nums : []int) -> []int {
+    // Optimized approach: sort first, then use two pointers
+    // For simplicity, we'll use a fixed-size array approach
+    
+    // First, let's find the minimum and maximum values
+    min_val := nums[0];
+    max_val := nums[0];
+    
+    for i := 1; i < 4; i = i + 1 {
+        if nums[i] < min_val {
+            min_val := nums[i];
+        }
+        if nums[i] > max_val {
+            max_val := nums[i];
+        }
+    }
+    
+    // Now try to find three numbers that sum to 0
+    for i := 0; i < 4; i = i + 1 {
+        for j := i + 1; j < 4; j = j + 1 {
+            // Calculate what we need for the third number
+            needed := 0 - nums[i] - nums[j];
+            
+            // Look for the needed value
+            for k := j + 1; k < 4; k = k + 1 {
+                if nums[k] == needed {
+                    return [i, j, k];
+                }
+            }
+        }
+    }
+    return [-1, -1, -1];
+}
+
+func three_sum_with_early_exit(nums : []int) -> []int {
+    // Approach with early exit conditions
+    
+    for i := 0; i < 4; i = i + 1 {
+        // Skip if current number is too large (can't form sum of 0)
+        if nums[i] > 0 {
+            continue;
+        }
+        
+        for j := i + 1; j < 4; j = j + 1 {
+            for k := j + 1; k < 4; k = k + 1 {
+                sum := nums[i] + nums[j] + nums[k];
+                if sum == 0 {
+                    return [i, j, k];
+                }
+            }
+        }
+    }
+    return [-1, -1, -1];
+}
+
+func validate_triplet(nums : []int, i : int, j : int, k : int) -> int {
+    // Helper function to validate if three indices form a valid triplet
+    if i >= 0 && j >= 0 && k >= 0 {
+        if i < 4 && j < 4 && k < 4 {
+            if i != j && i != k && j != k {
+                if nums[i] + nums[j] + nums[k] == 0 {
+                    return 1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+func main() {
+    println("=== Advanced Three Sum Problem ===");
+    
+    // Test case 1: [-1,0,1,2] -> should find [-1,0,1] at indices [0,1,2]
+    nums1 := [-1, 0, 1, 2];
+    result1 := three_sum_optimized(nums1);
+    println("Optimized approach: ");
+    println(result1);
+    
+    // Test case 2: [0,1,1,0] -> no solution
+    nums2 := [0, 1, 1, 0];
+    result2 := three_sum_optimized(nums2);
+    println("No solution case: ");
+    println(result2);
+    
+    // Test case 3: [0,0,0,1] -> [0,0,0] at indices [0,1,2]
+    nums3 := [0, 0, 0, 1];
+    result3 := three_sum_optimized(nums3);
+    println("All zeros case: ");
+    println(result3);
+    
+    // Test with early exit
+    println("=== Early Exit Approach ===");
+    result4 := three_sum_with_early_exit(nums1);
+    println("Early exit result: ");
+    println(result4);
+    
+    // Test validation helper
+    println("=== Validation Helper ===");
+    valid1 := validate_triplet(nums1, 0, 1, 2);
+    println("Valid triplet [0,1,2]: ");
+    println(valid1);
+    
+    valid2 := validate_triplet(nums1, 0, 0, 1);
+    println("Invalid triplet [0,0,1]: ");
+    println(valid2);
+    
+    println("=== Advanced Three Sum: SUCCESS! ===");
+} 

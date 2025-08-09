@@ -1,0 +1,67 @@
+// Simple Three Sum solution in Mars 1.0
+// Given an array of integers nums, return indices of three numbers that sum to 0
+
+func three_sum_simple(nums : []int) -> []int {
+    // Simple approach: check all combinations with i < j < k
+    for i := 0; i < 4; i = i + 1 {
+        for j := i + 1; j < 4; j = j + 1 {
+            for k := j + 1; k < 4; k = k + 1 {
+                if nums[i] + nums[j] + nums[k] == 0 {
+                    return [i, j, k];
+                }
+            }
+        }
+    }
+    return [-1, -1, -1];
+}
+
+func three_sum_with_variables(nums : []int) -> []int {
+    // Using variables to make the logic clearer
+    for i := 0; i < 4; i = i + 1 {
+        for j := i + 1; j < 4; j = j + 1 {
+            for k := j + 1; k < 4; k = k + 1 {
+                sum := nums[i] + nums[j] + nums[k];
+                if sum == 0 {
+                    return [i, j, k];
+                }
+            }
+        }
+    }
+    return [-1, -1, -1];
+}
+
+func main() {
+    println("=== Three Sum Problem ===");
+    
+    // Test case 1: [-1,0,1,2] -> should find [-1,0,1] at indices [0,1,2]
+    nums1 := [-1, 0, 1, 2];
+    result1 := three_sum_simple(nums1);
+    println("Test 1: [-1,0,1,2]");
+    println("Expected: [0,1,2] (indices of [-1,0,1])");
+    println("Result: ");
+    println(result1);
+    
+    // Test case 2: [0,1,1,0] -> no solution
+    nums2 := [0, 1, 1, 0];
+    result2 := three_sum_simple(nums2);
+    println("Test 2: [0,1,1,0]");
+    println("Expected: [-1,-1,-1] (no solution)");
+    println("Result: ");
+    println(result2);
+    
+    // Test case 3: [0,0,0,1] -> [0,0,0] at indices [0,1,2]
+    nums3 := [0, 0, 0, 1];
+    result3 := three_sum_simple(nums3);
+    println("Test 3: [0,0,0,1]");
+    println("Expected: [0,1,2] (indices of [0,0,0])");
+    println("Result: ");
+    println(result3);
+    
+    // Test with variables approach
+    println("=== With Variables Approach ===");
+    result4 := three_sum_with_variables(nums1);
+    println("With variables result: ");
+    println(result4);
+    
+    println("=== Three Sum: SUCCESS! ===");
+} 

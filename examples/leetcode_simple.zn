@@ -1,0 +1,26 @@
+// Simple LeetCode-style problem: Two Sum (simplified)
+// Find two numbers that add up to a target
+
+func two_sum(a : int, b : int, target : int) -> bool {
+    return a + b == target;
+}
+
+func is_palindrome(n : int) -> bool {
+    // Simple palindrome check for single digits
+    return n >= 0 && n <= 9;
+}
+
+func main() {
+    log("LeetCode Problems in Mars");
+    log("Two Sum Test:");
+    log("5 + 3 == 8: ");
+    log(two_sum(5, 3, 8));
+    log("5 + 3 == 9: ");
+    log(two_sum(5, 3, 9));
+    
+    log("Palindrome Test:");
+    log("5 is palindrome: ");
+    log(is_palindrome(5));
+    log("10 is palindrome: ");
+    log(is_palindrome(10));
+} 

@@ -1,0 +1,27 @@
+func test_for_loop_array_index(nums : []int) -> []int {
+    for i := 0; i < 4; i = i + 1 {
+        if nums[i] == 2 {
+            return [i, 0];
+        }
+    }
+    return [-1, -1];
+}
+
+func test_simple_array_index(nums : []int) -> []int {
+    if nums[0] == 2 {
+        return [0, 0];
+    }
+    return [-1, -1];
+}
+
+func main() {
+    nums := [2, 7, 11, 15];
+    
+    result1 := test_simple_array_index(nums);
+    println("Simple array index: ");
+    println(result1);
+    
+    result2 := test_for_loop_array_index(nums);
+    println("For loop array index: ");
+    println(result2);
+} 

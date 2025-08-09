@@ -1,0 +1,15 @@
+// Test array return types with array indexing
+
+func test_array_return_with_indexing() -> []int {
+    nums := [1, 2, 3, 4, 5];
+    first := nums[0];
+    second := nums[1];
+    return [first, second];
+}
+
+func main() {
+    log("Testing array return with indexing");
+    result := test_array_return_with_indexing();
+    log("Result: ");
+    log(result);
+} 

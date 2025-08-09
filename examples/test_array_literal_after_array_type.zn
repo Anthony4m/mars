@@ -1,0 +1,9 @@
+// Test array literal parsing after array types
+
+func test_array_literal_after_array_type(nums : []int) -> []int {
+    return [1, 2]; // This should work
+}
+
+func main() {
+    log("test");
+} 

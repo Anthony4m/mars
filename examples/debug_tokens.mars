@@ -1,0 +1,3 @@
+func test_tokens(nums : []int) -> int {
+    return nums[0];
+} 

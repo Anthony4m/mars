@@ -1,0 +1,13 @@
+func test() -> []int {
+    i := 0;
+    j := 1;
+    if true {
+        return [i, j];
+    }
+    return [0, 0];
+}
+
+func main() {
+    result := test();
+    println("Done");
+}

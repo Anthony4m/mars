@@ -1,0 +1,56 @@
+// LeetCode 1: Two Sum (Mars Implementation)
+// Given an array of integers nums and an integer target, 
+// return indices of the two numbers such that they add up to target.
+
+// Since Mars doesn't support arrays in functions yet, we'll solve it manually
+// This demonstrates the Two Sum algorithm concept
+
+func two_sum_check(a : int, b : int, target : int) -> bool {
+    return a + b == target;
+}
+
+func find_two_sum_pair(num1 : int, num2 : int, num3 : int, num4 : int, target : int) -> int {
+    // Check all possible pairs
+    if two_sum_check(num1, num2, target) {
+        return 1; // Found pair (num1, num2)
+    }
+    if two_sum_check(num1, num3, target) {
+        return 2; // Found pair (num1, num3)
+    }
+    if two_sum_check(num1, num4, target) {
+        return 3; // Found pair (num1, num4)
+    }
+    if two_sum_check(num2, num3, target) {
+        return 4; // Found pair (num2, num3)
+    }
+    if two_sum_check(num2, num4, target) {
+        return 5; // Found pair (num2, num4)
+    }
+    if two_sum_check(num3, num4, target) {
+        return 6; // Found pair (num3, num4)
+    }
+    return 0; // No solution found
+}
+
+func main() {
+    log("LeetCode 1: Two Sum in Mars");
+    log("Testing with array [2, 7, 11, 15] and target 9");
+    
+    // Test case 1: [2, 7, 11, 15], target = 9
+    result1 := find_two_sum_pair(2, 7, 11, 15, 9);
+    log("Result: ");
+    log(result1);
+    log("(1 = found, 0 = not found)");
+    
+    // Test case 2: [2, 7, 11, 15], target = 26
+    result2 := find_two_sum_pair(2, 7, 11, 15, 26);
+    log("Target 26 result: ");
+    log(result2);
+    
+    // Test case 3: [3, 2, 4], target = 6
+    result3 := find_two_sum_pair(3, 2, 4, 0, 6);
+    log("Target 6 result: ");
+    log(result3);
+    
+    log("Two Sum algorithm concept demonstrated!");
+} 

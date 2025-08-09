@@ -1,0 +1,6 @@
+func test_simple(nums : []int, target : int) -> []int {
+    if nums[0] == target {
+        return [0];
+    }
+    return [-1];
+} 

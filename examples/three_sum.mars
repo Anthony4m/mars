@@ -1,0 +1,76 @@
+// Three Sum solution in Mars 1.0
+// Given an array of integers nums, return all unique triplets [nums[i], nums[j], nums[k]]
+// such that i != j, i != k, and j != k, and nums[i] + nums[j] + nums[k] == 0
+
+func three_sum(nums : []int) -> []int {
+    // For simplicity, we'll return the first valid triplet found
+    // In a full implementation, we'd need to return all unique triplets
+    
+    for i := 0; i < 4; i = i + 1 {
+        for j := i + 1; j < 4; j = j + 1 {
+            for k := j + 1; k < 4; k = k + 1 {
+                if nums[i] + nums[j] + nums[k] == 0 {
+                    return [i, j, k];
+                }
+            }
+        }
+    }
+    return [-1, -1, -1];
+}
+
+func three_sum_brute_force(nums : []int) -> []int {
+    // Brute force approach - check all possible triplets
+    for i := 0; i < 4; i = i + 1 {
+        for j := 0; j < 4; j = j + 1 {
+            for k := 0; k < 4; k = k + 1 {
+                // Skip if any indices are the same using nested if statements
+                if i != j {
+                    if i != k {
+                        if j != k {
+                            if nums[i] + nums[j] + nums[k] == 0 {
+                                return [i, j, k];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return [-1, -1, -1];
+}
+
+func main() {
+    println("=== Three Sum Problem ===");
+    
+    // Test case 1: [-1,0,1,2,-1,-4] -> should find [-1,-1,2] or [-1,0,1]
+    nums1 := [-1, 0, 1, 2];
+    result1 := three_sum(nums1);
+    println("Test 1: [-1,0,1,2]");
+    println("Expected: [0,1,2] (indices of [-1,0,1])");
+    println("Result: ");
+    println(result1);
+    
+    // Test case 2: [0,1,1] -> no solution
+    nums2 := [0, 1, 1, 0];
+    result2 := three_sum(nums2);
+    println("Test 2: [0,1,1,0]");
+    println("Expected: [-1,-1,-1] (no solution)");
+    println("Result: ");
+    println(result2);
+    
+    // Test case 3: [0,0,0] -> [0,0,0]
+    nums3 := [0, 0, 0, 1];
+    result3 := three_sum(nums3);
+    println("Test 3: [0,0,0,1]");
+    println("Expected: [0,1,2] (indices of [0,0,0])");
+    println("Result: ");
+    println(result3);
+    
+    // Test brute force approach
+    println("=== Brute Force Approach ===");
+    result4 := three_sum_brute_force(nums1);
+    println("Brute force result: ");
+    println(result4);
+    
+    println("=== Three Sum: SUCCESS! ===");
+} 

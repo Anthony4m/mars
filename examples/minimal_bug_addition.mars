@@ -1,0 +1,6 @@
+func bug_test(nums : []int) -> int {
+    if nums[0] + nums[1] == 3 {
+        return 1;
+    }
+    return 0;
+} 

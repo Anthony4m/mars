@@ -1,0 +1,35 @@
+// Working LeetCode example: Add Two Numbers
+// Using correct Mars syntax based on parser implementation
+
+func add(a : int, b : int) -> int {
+    return a + b;
+}
+
+func multiply(a : int, b : int) -> int {
+    return a * b;
+}
+
+func main() {
+    // Test basic arithmetic
+    result1 := add(5, 3);
+    result2 := multiply(4, 7);
+    
+    // Simple array operations
+    numbers := [1, 2, 3, 4, 5];
+    sum := 0;
+    
+    // Calculate sum of array (simplified)
+    sum := add(sum, numbers[0]);
+    sum := add(sum, numbers[1]);
+    sum := add(sum, numbers[2]);
+    sum := add(sum, numbers[3]);
+    sum := add(sum, numbers[4]);
+    
+    // Output results
+    log("5 + 3 = ");
+    log(result1);
+    log("4 * 7 = ");
+    log(result2);
+    log("Sum of [1,2,3,4,5] = ");
+    log(sum);
+} 

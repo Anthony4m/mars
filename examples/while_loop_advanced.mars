@@ -1,0 +1,18 @@
+func main() {
+    mut i := 0;
+    while i < 10 {
+        if i == 3 {
+            println("Skipping 3");
+            i = i + 1;
+            continue;
+        }
+        if i == 7 {
+            println("Breaking at 7");
+            break;
+        }
+        println("i is:");
+        println(i);
+        i = i + 1;
+    }
+    println("Advanced loop finished!");
+} 

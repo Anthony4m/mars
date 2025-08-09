@@ -1,0 +1,29 @@
+name: Test Mars Language
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+    
+    - name: Test Mars Language
+      run: |
+        go test ./...
+    
+    - name: Test Mars Programs
+      run: |
+        go run cmd/mars/*.go run examples/while_loop_test.mars
+        go run cmd/mars/*.go run examples/two_sum_working_final.mars
+        go run cmd/mars/*.go run examples/binary_search_with_while.mars 

@@ -1,0 +1,43 @@
+func trap_simple(height : []int) -> int {
+    // Simple test case: [2,0,2] should trap 2 units of water
+    if len(height) < 3 {
+        return 0;
+    }
+    
+    // For position 1 (index 1), height is 0
+    // Left max is 2, right max is 2
+    // Water trapped = min(2,2) - 0 = 2
+    
+    left_max := height[0];  // 2
+    right_max := height[2]; // 2
+    
+    println("Left max:");
+    println(left_max);
+    println("Right max:");
+    println(right_max);
+    println("Current height:");
+    println(height[1]);
+    
+    min_height := left_max;
+    if right_max < left_max {
+        min_height := right_max;
+    }
+    
+    println("Min height:");
+    println(min_height);
+    
+    if min_height > height[1] {
+        water := min_height - height[1];
+        println("Water trapped:");
+        println(water);
+        return water;
+    }
+    
+    return 0;
+}
+
+func main() {
+    result := trap_simple([2, 0, 2]);
+    println("Final result:");
+    println(result);
+} 

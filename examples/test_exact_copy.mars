@@ -1,0 +1,24 @@
+// Working Two Sum implementation with array parameters
+func two_sum(nums : []int, target : int) -> []int {
+    for i := 0; i < 4; i = i + 1 {
+        for j := i + 1; j < 4; j = j + 1 {
+            if nums[i] + nums[j] == target {
+                return [i, j];
+            }
+        }
+    }
+    return [-1, -1];
+}
+
+func main() {
+    println("=== Two Sum with Array Parameters ===");
+    
+    // Test case 1: [2,7,11,15], target = 9
+    nums1 := [2, 7, 11, 15];
+    target1 := 9;
+    result1 := two_sum(nums1, target1);
+    println("Test 1: [2,7,11,15], target = 9");
+    println("Expected: [0,1]");
+    println("Result: ");
+    println(result1);
+}

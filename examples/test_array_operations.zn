@@ -1,0 +1,13 @@
+// Test array operations
+
+func test_array_operations() -> int {
+    nums := [1, 2, 3, 4, 5];
+    return nums[0];
+}
+
+func main() {
+    log("Testing array operations");
+    result := test_array_operations();
+    log("Result: ");
+    log(result);
+} 

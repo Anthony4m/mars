@@ -1,0 +1,9 @@
+// Test token recognition
+
+func test_tokens() -> int {
+    return 5;
+}
+
+func main() {
+    log("test");
+} 

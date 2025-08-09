@@ -1,0 +1,12 @@
+// Test if statement with simple condition
+
+func test_if_simple_condition(nums : []int, target : int) -> []int {
+    if target > 5 {
+        return [0, 1];
+    }
+    return [-1, -1];
+}
+
+func main() {
+    log("test");
+} 

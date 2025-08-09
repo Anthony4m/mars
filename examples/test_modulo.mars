@@ -1,0 +1,8 @@
+func main() {
+    mut i := 5;
+    if i % 2 == 0 {
+        println("even");
+    } else {
+        println("odd");
+    }
+} 

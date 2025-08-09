@@ -1,0 +1,81 @@
+package main
+
+import (
+	"fmt"
+	"mars/ast"
+	"mars/evaluator"
+	"mars/lexer"
+	"mars/parser"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
+func runFile(filename string) {
+	// Check if file exists
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist\n", filename)
+		os.Exit(1)
+	}
+
+	// Read file content
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		fmt.Printf("Error reading file '%s': %v\n", filename, err)
+		os.Exit(1)
+	}
+
+	// Check file extension
+	if filepath.Ext(filename) != ".mars" {
+		fmt.Printf("Warning: File '%s' doesn't have .mars extension\n", filename)
+	}
+
+	// Lexical analysis
+	l := lexer.New(string(content))
+
+	// Split content into lines for error reporting
+	sourceLines := strings.Split(string(content), "\n")
+
+	// Parsing
+	p := parser.NewParserWithSource(l, sourceLines)
+	program := p.ParseProgram()
+
+	// Check for parser errors
+	errors := p.GetErrors()
+	if errors != nil && errors.HasErrors() {
+		fmt.Printf("Parse errors in '%s':\n", filename)
+		for _, err := range errors.Errors() {
+			fmt.Printf("  %s\n", err)
+		}
+		os.Exit(1)
+	}
+
+	// Create evaluator
+	eval := evaluator.New()
+
+	// Evaluate the program (this defines functions and variables)
+	result := eval.Eval(program)
+
+	// Check for evaluation errors
+	if result != nil && result.Type() == "ERROR" {
+		fmt.Printf("Runtime error in '%s': %s\n", filename, result.String())
+		os.Exit(1)
+	}
+
+	// Try to call main function if it exists
+	_, exists := eval.GetEnvironment().Get("main")
+	if exists {
+		// Create a function call to main()
+		mainCall := &ast.FunctionCall{
+			Function:  &ast.Identifier{Name: "main"},
+			Arguments: []ast.Expression{},
+			Position:  ast.Position{Line: 1, Column: 1},
+		}
+
+		mainResult := eval.Eval(mainCall)
+		if mainResult != nil && mainResult.Type() == "ERROR" {
+			fmt.Printf("Runtime error in main(): %s\n", mainResult.String())
+			os.Exit(1)
+		}
+	}
+}

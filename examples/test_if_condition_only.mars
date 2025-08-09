@@ -1,0 +1,14 @@
+func test() {
+    nums := [1, 2, 3, 4];
+    target := 3;
+    for i := 0; i < 1; i = i + 1 {
+        for j := 0; j < 1; j = j + 1 {
+            if nums[i] + nums[j] == target {
+                println("found");
+            }
+        }
+    }
+}
+
+func main() {
+}
