@@ -1,1 +1,9 @@
 .idea
+# Release artifacts
+.DS_Store
+*.log
+analyzer/*.log
+/build/
+/bin/
+/dist/
+coverage/

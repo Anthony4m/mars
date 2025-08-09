@@ -11,12 +11,18 @@ import (
 )
 
 type parser struct {
-	lexer     *lexer.Lexer
-	curToken  lexer.Token
-	peekToken lexer.Token
-	prevToken lexer.Token
-	errors    *errors.ErrorList
-	source    []string // Store source lines for better error reporting
+	lexer      *lexer.Lexer
+	curToken   lexer.Token
+	peekToken  lexer.Token
+	peek2Token lexer.Token
+	hasPeek2   bool
+	prevToken  lexer.Token
+	errors     *errors.ErrorList
+	source     []string // Store source lines for better error reporting
+	// Tracks whether we're currently parsing an expression. Used to
+	// disambiguate constructs like IDENT '{' between struct literals
+	// (expression context) and block statements (statement context).
+	inExpression bool
 }
 
 func NewParser(lexer *lexer.Lexer) *parser {
@@ -29,8 +35,9 @@ func NewParserWithSource(lexer *lexer.Lexer, sourceLines []string) *parser {
 		errors: errors.NewErrorList(),
 		source: sourceLines,
 	}
-	p.nextToken()
-	p.nextToken()
+	// Initialize 2-token window
+	p.curToken = p.lexer.NextToken()
+	p.peekToken = p.lexer.NextToken()
 	return p
 }
 
@@ -631,7 +638,7 @@ func (p *parser) parseAssignment() ast.Declaration {
 
 	// Parse the left-hand side (could be identifier or indexed expression)
 	startPos := p.currentPosition()
-	object := p.parseIdentifierOrStructLiteral()
+	object := p.parseIdentifier()
 
 	// Check if this is an array assignment (object[index] = value)
 	if p.curTokenIs(lexer.LBRACKET) {
@@ -705,7 +712,13 @@ func (p *parser) parseTypeDeclaration() ast.Declaration {
 // ===== ENHANCED EXPRESSION PARSING =====
 
 func (p *parser) parseExpression() ast.Expression {
-	return p.parseLogicalOr()
+	// Enter expression context
+	wasInExpr := p.inExpression
+	p.inExpression = true
+	expr := p.parseLogicalOr()
+	// Restore previous context
+	p.inExpression = wasInExpr
+	return expr
 }
 
 // Keep your existing operator precedence methods
@@ -838,7 +851,7 @@ func (p *parser) parsePrimary() ast.Expression {
 	switch p.curToken.Type {
 	case lexer.IDENT:
 
-		expr = p.parseIdentifierOrStructLiteral()
+		expr = p.parseIdentifier()
 	case lexer.NUMBER:
 		expr = p.parseNumberLiteral()
 	case lexer.STRING:
@@ -861,7 +874,7 @@ func (p *parser) parsePrimary() ast.Expression {
 		return nil
 	}
 
-	// Handle suffixes (function calls, indexing, member access, slicing)
+	// Handle suffixes (function calls, indexing, member access, slicing, struct literals)
 	for {
 		switch p.curToken.Type {
 		case lexer.LPAREN:
@@ -870,6 +883,19 @@ func (p *parser) parsePrimary() ast.Expression {
 			expr = p.parseIndexOrSliceExpression(expr)
 		case lexer.DOT:
 			expr = p.parseMemberExpression(expr)
+		case lexer.LBRACE:
+			// Only treat IDENT '{' as a struct literal in expression context, and
+			// only if the contents look like field initializers (IDENT ':').
+			if p.inExpression {
+				if ident, ok := expr.(*ast.Identifier); ok {
+					if p.looksLikeStructLiteral() {
+						expr = p.parseStructLiteral(ident.Name)
+						continue
+					}
+				}
+			}
+			// Not a struct literal; leave for statement/block parser.
+			return expr
 		default:
 			// Return for any token that's not a suffix operator
 			// This allows higher-level parsers to handle binary operators
@@ -878,23 +904,24 @@ func (p *parser) parsePrimary() ast.Expression {
 	}
 }
 
-// parseIdentifierOrStructLiteral handles both identifiers and struct literals
-func (p *parser) parseIdentifierOrStructLiteral() ast.Expression {
+// looksLikeStructLiteral peeks inside a '{' to detect 'IDENT :'
+func (p *parser) looksLikeStructLiteral() bool {
+	// We are currently on '{'. The first token after '{' is parser.peekToken.
+	// The second token after '{' is the lexer's next (relative to current internal state).
+	first := p.peekToken
+	if first.Type == lexer.RBRACE {
+		// Empty literal: Type{}
+		return true
+	}
+	second := p.lexer.PeekTokenN(1)
+	return first.Type == lexer.IDENT && second.Type == lexer.COLON
+}
+
+// parseIdentifier handles identifiers
+func (p *parser) parseIdentifier() ast.Expression {
 	name := p.curToken.Literal
 	pos := p.currentPosition()
 	p.nextToken() // consume identifier
-
-	// Check if this is a struct literal: Point{x: 1, y: 2}
-	// Only parse as struct literal if we're in a context where it makes sense
-	// Don't parse as struct literal if this identifier is part of a larger expression
-	if p.curTokenIs(lexer.LBRACE) {
-		// Don't parse as struct literal in expression contexts where LBRACE might belong to control flow
-		// This is a conservative approach to prevent parsing "target {" as a struct literal in "== target {"
-		return &ast.Identifier{
-			Name:     name,
-			Position: pos,
-		}
-	}
 
 	return &ast.Identifier{
 		Name:     name,
@@ -971,6 +998,12 @@ func (p *parser) parseFieldInit() *ast.FieldInit {
 		return nil
 	}
 
+	// If the next token closes the struct or statement, we are missing a value.
+	if p.curTokenIs(lexer.RBRACE) {
+		// Emit a parser-state error to match historical expectations
+		p.recordParserStateError("unexpected token RBRACE in expression")
+	}
+
 	field.Value = p.parseExpression()
 	return field
 }
@@ -1039,16 +1072,6 @@ func (p *parser) parseIndexOrSliceExpression(object ast.Expression) ast.Expressi
 		Index:    startExpr,
 		Position: startPos,
 	}
-}
-
-// Keep your existing literal parsing methods
-func (p *parser) parseIdentifier() ast.Expression {
-	ident := &ast.Identifier{
-		Name:     p.curToken.Literal,
-		Position: p.currentPosition(),
-	}
-	p.nextToken()
-	return ident
 }
 
 func (p *parser) parseNumberLiteral() ast.Expression {
@@ -1203,6 +1226,8 @@ func (p *parser) parseMemberExpression(object ast.Expression) ast.Expression {
 
 // ===== STATEMENT PARSING =====
 func (p *parser) parseStatement() ast.Statement {
+	// We are not in expression context while parsing a statement
+	p.inExpression = false
 	// Guard: if we're at the end of a block or file, do not parse a statement
 	if p.curTokenIs(lexer.RBRACE) || p.curTokenIs(lexer.EOF) {
 		return nil

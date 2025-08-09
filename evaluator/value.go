@@ -20,6 +20,7 @@ const (
 	BREAK_TYPE    = "BREAK"
 	CONTINUE_TYPE = "CONTINUE"
 	ARRAY_TYPE    = "ARRAY"
+	STRUCT_TYPE   = "STRUCT"
 )
 
 // Value interface  all runtime values implement this
@@ -151,6 +152,32 @@ func (a *ArrayValue) String() string {
 	return "[" + strings.Join(elements, ", ") + "]"
 }
 func (a *ArrayValue) IsTruthy() bool { return len(a.Elements) > 0 }
+
+// StructValue represents a struct instance at runtime
+type StructValue struct {
+	TypeName string
+	Fields   map[string]Value
+}
+
+func (s *StructValue) Type() string { return STRUCT_TYPE }
+func (s *StructValue) String() string {
+	var b bytes.Buffer
+	b.WriteString(s.TypeName)
+	b.WriteString("{")
+	first := true
+	for k, v := range s.Fields {
+		if !first {
+			b.WriteString(", ")
+		}
+		first = false
+		b.WriteString(k)
+		b.WriteString(": ")
+		b.WriteString(v.String())
+	}
+	b.WriteString("}")
+	return b.String()
+}
+func (s *StructValue) IsTruthy() bool { return true }
 
 func (i *BreakValue) Type() string   { return BREAK_TYPE }
 func (i *BreakValue) String() string { return fmt.Sprintf("%d", i.Value) }

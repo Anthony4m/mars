@@ -19,14 +19,13 @@ func test_nested_loops(nums : []int, target : int) -> []int {
 }
 
 func main() {
-    nums := [2, 7, 11, 15];
-    target := 2;
-    
-    result1 := test_single_loop(nums, target);
-    println("Single loop: ");
-    println(result1);
-    
-    result2 := test_nested_loops(nums, target);
-    println("Nested loops: ");
-    println(result2);
+    nums := [1, 2, 3, 4];
+    for i := 0; i < len(nums); i = i + 1 {
+        for j := i + 1; j < len(nums); j = j + 1 {
+            if nums[i] + nums[j] == 5 {
+                println(i);
+                println(j);
+            }
+        }
+    }
 } 

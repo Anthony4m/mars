@@ -1,0 +1,10 @@
+struct Point {
+    x: int;
+    y: int;
+}
+
+func main() {
+    // This should work now that Point is registered as a struct type
+    x := Point{x: 5, y: 10};
+    println(x.x);
+} 

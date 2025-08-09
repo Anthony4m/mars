@@ -269,6 +269,19 @@ func (l *Lexer) NextToken() Token {
 	}
 }
 
+// PeekTokenN returns the N-th upcoming token without consuming any input.
+// n = 1 returns the next token that would be produced by NextToken(),
+// n = 2 returns the token after that, and so on.
+func (l *Lexer) PeekTokenN(n int) Token {
+	// Make a shallow copy of the lexer state so advancing doesn't affect the original
+	clone := *l
+	var tok Token
+	for i := 0; i < n; i++ {
+		tok = clone.NextToken()
+	}
+	return tok
+}
+
 // readIdentifier reads an identifier or keyword
 func (l *Lexer) readIdentifier() string {
 	var identifier []rune

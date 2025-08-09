@@ -32,6 +32,7 @@ var binaryOps = map[string]binaryOpFn{
 	"-":  subtract,
 	"*":  multiply,
 	"/":  divide,
+	"%":  modulo,
 	"==": equal,
 	"!=": notEqual,
 	"<":  lessThan,
@@ -170,6 +171,46 @@ func divide(left, right Value) Value {
 		return &FloatValue{Value: lv / rv}
 	}
 	return newError("type mismatch: cannot divide %s by %s", left.Type(), right.Type())
+}
+
+// Handler for the '%' operator
+func modulo(left, right Value) Value {
+	// Handle integer modulo
+	if left.Type() == INTEGER_TYPE && right.Type() == INTEGER_TYPE {
+		lv := left.(*IntegerValue).Value
+		rv := right.(*IntegerValue).Value
+		if rv == 0 {
+			return newError("modulo by zero")
+		}
+		return &IntegerValue{Value: lv % rv}
+	}
+	// Handle float modulo (convert to int64 for now)
+	if left.Type() == FLOAT_TYPE && right.Type() == FLOAT_TYPE {
+		lv := int64(left.(*FloatValue).Value)
+		rv := int64(right.(*FloatValue).Value)
+		if rv == 0 {
+			return newError("modulo by zero")
+		}
+		return &IntegerValue{Value: lv % rv}
+	}
+	// Handle mixed int/float modulo
+	if left.Type() == FLOAT_TYPE && right.Type() == INTEGER_TYPE {
+		lv := int64(left.(*FloatValue).Value)
+		rv := right.(*IntegerValue).Value
+		if rv == 0 {
+			return newError("modulo by zero")
+		}
+		return &IntegerValue{Value: lv % rv}
+	}
+	if left.Type() == INTEGER_TYPE && right.Type() == FLOAT_TYPE {
+		lv := left.(*IntegerValue).Value
+		rv := int64(right.(*FloatValue).Value)
+		if rv == 0 {
+			return newError("modulo by zero")
+		}
+		return &IntegerValue{Value: lv % rv}
+	}
+	return newError("type mismatch: cannot compute modulo of %s and %s", left.Type(), right.Type())
 }
 
 // Handler for the '==' operator
@@ -450,6 +491,10 @@ func (e *Evaluator) Eval(node ast.Node) Value {
 		return e.evalFunctionCall(n)
 	case *ast.ArrayLiteral:
 		return e.evalArrayLiteral(n)
+	case *ast.StructLiteral:
+		return e.evalStructLiteral(n)
+	case *ast.MemberExpression:
+		return e.evalMemberExpression(n)
 	case *ast.IndexExpression:
 		return e.evalIndexExpression(n)
 	case *ast.SliceExpression:
@@ -1022,6 +1067,41 @@ func (e *Evaluator) evalArrayLiteral(n *ast.ArrayLiteral) Value {
 	}
 
 	return &ArrayValue{Elements: elements}
+}
+
+func (e *Evaluator) evalStructLiteral(n *ast.StructLiteral) Value {
+	if n.Type == nil {
+		return e.newError(n.Position, ErrRuntimeError, "struct literal missing type")
+	}
+
+	fields := make(map[string]Value)
+	for _, f := range n.Fields {
+		if f == nil || f.Name == nil || f.Value == nil {
+			return e.newError(n.Position, ErrRuntimeError, "invalid struct field initialization")
+		}
+		v := e.Eval(f.Value)
+		if isError(v) {
+			return v
+		}
+		fields[f.Name.Name] = v
+	}
+
+	return &StructValue{TypeName: n.Type.Name, Fields: fields}
+}
+
+func (e *Evaluator) evalMemberExpression(n *ast.MemberExpression) Value {
+	obj := e.Eval(n.Object)
+	if isError(obj) {
+		return obj
+	}
+	if obj.Type() == STRUCT_TYPE {
+		sv := obj.(*StructValue)
+		if val, ok := sv.Fields[n.Property.Name]; ok {
+			return val
+		}
+		return e.newError(n.Position, ErrRuntimeError, "field '%s' not found on %s", n.Property.Name, sv.TypeName)
+	}
+	return e.newError(n.Position, ErrRuntimeError, "cannot access member on type %s", obj.Type())
 }
 
 func getValueType(v Value) string {

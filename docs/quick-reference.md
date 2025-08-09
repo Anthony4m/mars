@@ -113,20 +113,21 @@ enabled := false;
 empty := null;
 ```
 
-### Complex Types 🔄 **Parsed, Not Evaluated**
+### Complex Types ✅ **Working (Structs beta)**
 
 ```mars
 // Array types (parsed, not evaluated)
 numbers : [5]int = [1, 2, 3, 4, 5];
 dynamic := [1, 2, 3, 4, 5];
 
-// Struct types (parsed, not evaluated)
+// Struct types
 struct Point {
     x: int;
     y: int;
 }
 
-point := Point{x: 1, y: 2};
+point := Point{x: 1, y: 2}; // struct literal
+v := point.x;               // field access (runtime)
 
 // Pointer types (parsed, not evaluated)
 ptr : *int;
@@ -278,17 +279,17 @@ first := numbers[0];
 slice := numbers[1:3];
 ```
 
-### Struct Operations 🔄 **Parsed, Not Evaluated**
+### Struct Operations ✅ **Working (beta)**
 
 ```mars
-// These are parsed but not evaluated at runtime
+// Struct declarations, literals, and field access are supported
 struct Person {
     name: string;
     age: int;
 }
 
 person := Person{name: "Alice", age: 30};
-name := person.name;
+name := person.name; // "Alice"
 ```
 
 ### Unsafe Blocks 🔄 **Parsed, Not Evaluated**

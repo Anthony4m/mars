@@ -40,6 +40,7 @@ Mars is a modern, statically-typed programming language that compiles to Go. It 
 - **Go Interop**: Seamless integration with Go code and ecosystem
 - **Modern Syntax**: Clean and expressive syntax with modern language features
 - **Algorithmic Problem Solving**: Full support for complex algorithms and data structures
+ - **Structs (beta)**: Struct declarations, struct literals, and field access
 
 ## Quick Start
 
@@ -90,6 +91,26 @@ func main() {
     println(result);
 }
 ```
+
+### Structs (beta)
+
+```mars
+struct Point {
+    x: int;
+    y: int;
+}
+
+func main() {
+    p := Point{x: 1, y: 2};
+    println(p.x); // 1
+}
+```
+
+Notes:
+- Struct literals are parsed only in expression context (e.g., right-hand side of assignments, arguments).
+- The parser uses context-aware disambiguation (similar to Go): `IDENT { IDENT : ... }` → struct literal; `if cond {` → block.
+- Field access via `obj.field` works at runtime.
+- Current limitations: analyzer validation for struct fields/types is pending; field mutation (`p.x = 3`) is not yet implemented.
 
 ## Documentation
 

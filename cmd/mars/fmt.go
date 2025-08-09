@@ -20,7 +20,7 @@ func formatFile(filename string) {
 	// Read file content
 	content, err := os.ReadFile(filename)
 	if err != nil {
-		fmt.Printf("Error reading file '%s': %v\n", filename)
+		fmt.Printf("Error reading file '%s': %v\n", filename, err)
 		os.Exit(1)
 	}
 

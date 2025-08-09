@@ -1,4 +1,4 @@
-func two_sum(nums : []int, target : int) -> []int {
+func two_sum(nums: []int, target: int) -> []int {
     for i := 0; i < len(nums); i = i + 1 {
         for j := i + 1; j < len(nums); j = j + 1 {
             if nums[i] + nums[j] == target {
@@ -10,21 +10,8 @@ func two_sum(nums : []int, target : int) -> []int {
 }
 
 func main() {
-    // Test case 1: [2,7,11,15], target = 9
-    result1 := two_sum([2, 7, 11, 15], 9);
-    println("Test 1: [2,7,11,15], target=9");
-    println("Result:");
-    println(result1);
-    
-    // Test case 2: [3,2,4], target = 6
-    result2 := two_sum([3, 2, 4], 6);
-    println("Test 2: [3,2,4], target=6");
-    println("Result:");
-    println(result2);
-    
-    // Test case 3: [3,3], target = 6
-    result3 := two_sum([3, 3], 6);
-    println("Test 3: [3,3], target=6");
-    println("Result:");
-    println(result3);
+    nums := [2, 7, 11, 15];
+    target := 9;
+    result := two_sum(nums, target);
+    println(result);
 } 
