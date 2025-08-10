@@ -9,14 +9,14 @@ Mars is a modern, statically-typed programming language that compiles to Go. It 
 
 ## **Mars 1.0: MISSION ACCOMPLISHED**
 
-**Mars 1.0 is a fully functional programming language capable of solving real algorithmic challenges.**
+**Mars 1.0 is a fully working programming language capable of solving real algorithmic challenges.**
 
 ### **Major Achievements**
 
 - **Complete Language Implementation**: All core features working
 - **Algorithmic Problem Solving**: Successfully solved 5+ LeetCode problems
 - **Hard Problem Capability**: Can handle LeetCode Hard problems
-- **Production Ready**: Language is functional for practical use
+- **Production Ready**: Language is fully working for practical use
 - **Extensible Architecture**: Ready for future enhancements
 
 ### **LeetCode Problems Solved**
@@ -186,7 +186,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Community
 
-- [GitHub Issues](https://github.com/yourusername/mars/issues)
+- [GitHub Issues](https://github.com/anthony4m/mars/issues)
 - [Discord Server](https://discord.gg/mars-lang)
 - [Blog](https://mars-lang.org/blog)
 
@@ -257,6 +257,12 @@ Mars 1.0 has successfully solved:
 
 ## Status
 
-**Mars 1.0 is a fully functional programming language** with a solid foundation and extensive capabilities. The language can execute complex programs with variables, functions, control flow, arrays, and algorithmic problem solving. All core features are implemented and working, making Mars ready for practical use and further development.
+**Mars 1.0 is a fully working programming language** with a solid foundation and extensive capabilities. The language can execute complex programs with variables, functions, control flow, arrays, and algorithmic problem solving. All core features are implemented and working, making Mars ready for practical use and further development.
+
+### Stability: 1.0
+
+- Syntax and semantics for 1.0 are frozen.
+- Bugfixes and security updates only on the `1.0-maint` branch.
+- New features go through the 1.x proposals queue (see `docs/proposals/`).
 
 **Mars 1.0: MISSION ACCOMPLISHED** 

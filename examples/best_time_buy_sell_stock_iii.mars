@@ -9,12 +9,12 @@ func max_profit(prices : []int) -> int {
     mut max_profit := 0;
     
     // Try all possible split points for two transactions
-    for i := 1; i < len(prices) - 1; i = i + 1 {
+    for mut i := 1; i < len(prices) - 1; i = i + 1 {
         // First transaction: 0 to i
         mut profit1 := 0;
         mut min_price1 := prices[0];
         
-        for j := 1; j <= i; j = j + 1 {
+        for mut j := 1; j <= i; j = j + 1 {
             if prices[j] < min_price1 {
                 min_price1 = prices[j];
             }
@@ -28,7 +28,7 @@ func max_profit(prices : []int) -> int {
         mut profit2 := 0;
         mut min_price2 := prices[i + 1];
         
-        for j := i + 2; j < len(prices); j = j + 1 {
+        for mut j := i + 2; j < len(prices); j = j + 1 {
             if prices[j] < min_price2 {
                 min_price2 = prices[j];
             }

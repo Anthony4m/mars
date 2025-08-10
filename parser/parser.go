@@ -1435,13 +1435,12 @@ func (p *parser) parseVariableDeclarationForLoop() ast.Declaration {
 		Position: startPos,
 	}
 
-	// Check for "mut" keyword
+	// Check for "mut" keyword (no implicit mutability in for-init)
 	if p.curTokenIs(lexer.MUT) {
 		varDecl.Mutable = true
 		p.nextToken() // consume "mut"
 	} else {
-		// For loop variables should be mutable by default
-		varDecl.Mutable = true
+		varDecl.Mutable = false
 	}
 
 	if !p.curTokenIs(lexer.IDENT) {

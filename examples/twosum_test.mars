@@ -1,17 +1,16 @@
-func twosum(nums: []int, target: int)-> []int{
-    for i := 0; i < len(nums); i = i + 1{
-    for j := i + 1; j < len(nums); j = j + 1{
-    if nums[j] == target - nums[i]{
-    return [i,j]
+func twosum(nums: []int, target: int) -> []int {
+    for mut i := 0; i < len(nums); i = i + 1 {
+        for mut j := i + 1; j < len(nums); j = j + 1 {
+            if nums[j] == target - nums[i] {
+                return [i, j];
+            }
+        }
     }
-    }
-    }
-    return []
+    return [-1, -1];
 }
 
-
 func main() {
-   nums := [2,7,11,15], target := 100
-
-   log(twosum(nums,target))
-} 
+    nums := [2, 7, 11, 15];
+    target := 9;
+    println(twosum(nums, target));
+}

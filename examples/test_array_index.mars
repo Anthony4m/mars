@@ -1,6 +1,6 @@
 func main() {
     nums := [1, 2, 3, 4];
-    for i := 0; i < len(nums); i = i + 1 {
+    for mut i := 0; i < len(nums); i = i + 1 {
         if nums[i] == 2 {
             println(i);
         }

@@ -1,7 +1,7 @@
 func twoSum(nums : []int, target : int) -> []int {
     // Use simple variable assignments to avoid the parser bug
-    for i := 0; i < len(nums); i = i + 1 {
-        for j := i + 1; j < len(nums); j = j + 1 {
+    for mut i := 0; i < len(nums); i = i + 1 {
+        for mut j := i + 1; j < len(nums); j = j + 1 {
             // Store values in variables first
             val1 := nums[i];
             val2 := nums[j];

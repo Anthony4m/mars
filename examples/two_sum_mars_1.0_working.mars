@@ -44,7 +44,7 @@ func test_array_basics() -> []int {
 // Test for loops with arrays (if they work)
 func test_for_loop_with_array() -> int {
     sum := 0;
-    for i := 0; i < 4; i = i + 1 {
+    for mut i := 0; i < 4; i = i + 1 {
         sum := sum + i;
     }
     return sum;

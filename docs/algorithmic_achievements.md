@@ -2,7 +2,7 @@
 
 ## **Overview**
 
-Mars 1.0 has successfully solved **7+ LeetCode problems** across Easy, Medium, and Hard difficulty levels, demonstrating that it's a **fully functional programming language** capable of handling real algorithmic challenges.
+Mars 1.0 has successfully solved **7+ LeetCode problems** across Easy, Medium, and Hard difficulty levels, demonstrating that it's a **fully working programming language** capable of handling real algorithmic challenges.
 
 ## **LeetCode Problems Solved**
 
@@ -337,7 +337,12 @@ func findMedianSortedArray(nums1: []int, nums2: []int) -> float {
 
 1. **Complete Algorithmic Support**: All major algorithmic patterns working
 2. **Hard Problem Capability**: Successfully solved LeetCode Hard problems
-3. **Production Ready**: Language is functional for real-world algorithms
+3. **Production Ready**: Language is fully working for real-world algorithms
+
+### Stability: 1.0
+
+- Mars 1.0 syntax/semantics are frozen.
+- Bugfixes only on `1.0-maint`; new features via 1.x proposals.
 4. **Extensible Architecture**: Ready for more complex algorithms
 5. **Performance**: Efficient execution of complex algorithms
 
@@ -387,7 +392,7 @@ error[E0011]: parser state error: unexpected token '}' in expression (context: c
 
 ## **Conclusion**
 
-**Mars 1.0 has proven itself as a fully functional programming language capable of solving real algorithmic challenges.** The language successfully handles:
+**Mars 1.0 has proven itself as a fully working programming language capable of solving real algorithmic challenges.** The language successfully handles:
 
 - **Complex Algorithms**: Dynamic programming, greedy algorithms
 - **Data Structures**: Arrays, nested arrays, complex types

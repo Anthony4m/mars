@@ -87,6 +87,37 @@ git push origin feature/your-feature-name
 - **Go Style**: Follow Go formatting and conventions
 - **Comments**: Document public APIs and complex logic
 - **Tests**: Add tests for new functionality
+
+## Stability and branches
+
+- 1.0 syntax/semantics are frozen. No new features on `1.0-maint`.
+- Submit bugfix PRs targeting `1.0-maint`; they will be merged back to `main` via PR.
+- New features target `main` behind a proposal (see `docs/proposals/`).
+
+## Repo structure quick tour
+
+- `lexer/`, `parser/`, `ast/`, `analyzer/`, `evaluator/`: language core
+- `cmd/mars/`: CLI entrypoints (`run`, `fmt`, `repl`, `test`)
+- `examples/`: runnable examples with comments and expected outputs
+- `docs/`: architecture, tutorial, roadmap, quick reference
+
+## How to add a builtin
+
+- Implement in `evaluator/builtins.go`, register in `BuiltinFunctions`
+- Add unit tests in `evaluator/builtins_test.go`
+
+## How to add syntax
+
+- Update tokens in `lexer/token.go`
+- Extend parser in `parser/parser.go` and AST in `ast/ast.go`
+- Add analyzer checks as needed
+- Add parser/analyzer tests
+
+## How to write tests
+
+- Parser tests in `parser/parser_test.go`
+- Analyzer tests in `analyzer/anaylzer_test.go`
+- Evaluator tests in `evaluator/evaluator_test.go`
 - **Documentation**: Update relevant docs
 
 ### **4. Pull Request Guidelines**

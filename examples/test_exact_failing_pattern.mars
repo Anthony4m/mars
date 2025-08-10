@@ -1,6 +1,6 @@
 func test_exact_pattern(nums : []int, target : int) -> []int {
-    for i := 0; i < 4; i = i + 1 {
-        for j := i + 1; j < 4; j = j + 1 {
+    for mut i := 0; i < 4; i = i + 1 {
+        for mut j := i + 1; j < 4; j = j + 1 {
             if nums[i] + nums[j] == target {
                 return [i, j];
             }

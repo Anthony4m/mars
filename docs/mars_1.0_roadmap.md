@@ -166,4 +166,4 @@ Mars 1.0 will be considered complete when:
 5. **Add hash map support**
 6. **Test with Two Sum implementation**
 
-This roadmap ensures Mars 1.0 will be a fully functional programming language capable of solving real algorithmic problems like Two Sum! 
+This roadmap ensures Mars 1.0 will be a fully working programming language capable of solving real algorithmic problems like Two Sum! 
