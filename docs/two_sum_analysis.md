@@ -194,4 +194,4 @@ Mars 1.0 will be complete when:
 5. **Implement array returns** - needed for function outputs
 6. **Add hash maps** - needed for optimization
 
-This analysis provides a clear roadmap for making Mars 1.0 a fully functional programming language capable of solving real algorithmic problems! 
+This analysis provides a clear roadmap for making Mars 1.0 a fully working programming language capable of solving real algorithmic problems! 

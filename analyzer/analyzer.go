@@ -712,12 +712,13 @@ func (a *Analyzer) CheckAssignment(stmt *ast.AssignmentStatement) error {
 		return err
 	}
 
-	// 2) if the symbol was declared immutable, error
+	// 2) if the symbol was declared immutable, error with fix-it
 	if !sym.IsMutable {
-		a.errors.AddError(
+		a.errors.AddErrorWithHelp(
 			stmt.Name.Position,
 			errors.ErrCodeImmutable,
 			fmt.Sprintf("cannot assign to immutable variable %q", stmt.Name.Name),
+			"add 'mut' to the declaration: e.g., 'mut "+stmt.Name.Name+" : <type> = ...' or 'mut "+stmt.Name.Name+" := ...'",
 		)
 		// still continue so we can report other errors
 	}
