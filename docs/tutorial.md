@@ -20,7 +20,7 @@ func main() {
 
 ### Variables
 
-Variables in Mars are immutable by default. Use `mut` to declare mutable variables:
+Variables in Mars are immutable by default. Use `mut` to declare mutable variables. There is no implicit mutability in any context (including `for`/`while` headers):
 
 ```mars
 // Immutable variable with explicit type
@@ -33,7 +33,7 @@ name := "Mars";
 mut y : int = 10;
 y = 20;  // OK - y is mutable
 
-// x = 30;  // Error: cannot assign to immutable variable
+// x = 30;  // Error: cannot assign to immutable variable (add 'mut')
 ```
 
 ### Type Inference vs Explicit Types

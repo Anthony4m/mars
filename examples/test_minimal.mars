@@ -1,5 +1,5 @@
 func main() {
-    for i := 0; i < 5; i = i + 1 {
+    for mut i := 0; i < 5; i = i + 1 {
         if i == 2 {
             println(i);
         }

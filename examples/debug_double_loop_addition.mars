@@ -1,7 +1,7 @@
 func test() {
     nums := [1, 2];
-    for i := 0; i < 1; i = i + 1 {
-        for j := 0; j < 1; j = j + 1 {
+    for mut i := 0; i < 1; i = i + 1 {
+        for mut j := 0; j < 1; j = j + 1 {
             if nums[i] + nums[j] == 2 {
             }
         }

@@ -1,5 +1,5 @@
 func test() -> []int {
-    for i := 0; i < 2; i = i + 1 {
+    for mut i := 0; i < 2; i = i + 1 {
         sum := i + 1;
         if sum == 2 {
             return [i, 1];

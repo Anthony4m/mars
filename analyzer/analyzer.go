@@ -147,20 +147,36 @@ func (a *Analyzer) collectDeclarations(node ast.Node) error {
 func (a *Analyzer) CheckVarDecl(decl *ast.VarDecl) error {
 	// DEBUG: Log variable being resolved and current scope pointer
 	debugLog(fmt.Sprintf("[DEBUG] Resolving variable '%s' in scope %p", decl.Name.Name, a.symbols.CurrentScope))
-	// 1) resolve symbol (must have been defined in pass 1)
-	sym, err := a.symbols.Resolve(decl.Name.Name)
-	if err != nil {
-		help := fmt.Sprintf("declare variable %q before use", decl.Name.Name)
-		a.errors.AddErrorWithHelp(
-			decl.Name.Position,
-			errors.ErrCodeUndefinedVar,
-			fmt.Sprintf("variable %q not found", decl.Name.Name),
-			help,
-		)
-		return nil
-	}
+	// Attempt to use an existing symbol if it was defined in pass 1.
+	// If not found (e.g., local variables inside function bodies), define it now in the current scope.
+	var declared ast.Type
+	if sym, err := a.symbols.Resolve(decl.Name.Name); err == nil {
+		declared = sym.Type
+	} else {
+		// Determine declared type
+		if decl.Type != nil {
+			declared = *decl.Type
+		} else if decl.Value != nil {
+			inferred := a.inferExpressionType(decl.Value)
+			if inferred != nil {
+				declared = *inferred
+			} else {
+				declared = ast.Type{BaseType: "unknown"}
+			}
+		} else {
+			declared = ast.Type{BaseType: "unknown"}
+		}
 
-	declared := sym.Type // ast.Type
+		if err := a.symbols.Define(decl.Name.Name, declared, decl.Mutable, false, decl); err != nil {
+			a.errors.AddErrorWithHelp(
+				decl.Name.Position,
+				errors.ErrCodeDuplicateDecl,
+				fmt.Sprintf("variable '%s' is already defined in this scope", decl.Name.Name),
+				"give this variable a different name",
+			)
+			// Continue to allow more diagnostics
+		}
+	}
 	hasAnnot := decl.Type != nil
 	hasInit := decl.Value != nil
 
@@ -712,12 +728,13 @@ func (a *Analyzer) CheckAssignment(stmt *ast.AssignmentStatement) error {
 		return err
 	}
 
-	// 2) if the symbol was declared immutable, error
+	// 2) if the symbol was declared immutable, error with fix-it
 	if !sym.IsMutable {
-		a.errors.AddError(
+		a.errors.AddErrorWithHelp(
 			stmt.Name.Position,
 			errors.ErrCodeImmutable,
 			fmt.Sprintf("cannot assign to immutable variable %q", stmt.Name.Name),
+			"add 'mut' to the declaration: e.g., 'mut "+stmt.Name.Name+" : <type> = ...' or 'mut "+stmt.Name.Name+" := ...'",
 		)
 		// still continue so we can report other errors
 	}

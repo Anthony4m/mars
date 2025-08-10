@@ -92,6 +92,11 @@ func (p *Parser) parseExpression(precedence int) ast.Expression
 - **Interface Hierarchy**: Clear separation of concerns
 - **Immutability**: AST nodes are immutable after creation
 
+### Stability policy
+
+- 1.0 syntax/semantics are locked. Only correctness and security fixes are accepted on `1.0-maint`.
+- Proposals for 1.x live under `docs/proposals/` and must include rationale and impact.
+
 **Core Interfaces**:
 ```go
 type Node interface {

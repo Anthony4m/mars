@@ -270,6 +270,36 @@ func TestAssignments(t *testing.T) {
 	}
 }
 
+func TestForInitMutability(t *testing.T) {
+	tests := []struct {
+		name     string
+		code     string
+		errorMsg string
+	}{
+		{
+			name:     "for-init without mut should error on post increment",
+			code:     "func main(){ for i := 0; i < 2; i = i + 1 { } }",
+			errorMsg: "cannot assign to immutable variable",
+		},
+		{
+			name:     "for-init with mut should be ok",
+			code:     "func main(){ for mut i := 0; i < 2; i = i + 1 { } }",
+			errorMsg: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			errStr := testAnalyze(tt.code)
+			if tt.errorMsg != "" {
+				assertErrorContains(t, errStr, tt.errorMsg)
+			} else {
+				assertNoError(t, errStr)
+			}
+		})
+	}
+}
+
 func TestFunctionCalls(t *testing.T) {
 	tests := []struct {
 		name     string

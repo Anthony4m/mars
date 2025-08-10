@@ -1,6 +1,6 @@
 func test_nested_for_simple(nums : []int) -> []int {
-    for i := 0; i < 4; i = i + 1 {
-        for j := i + 1; j < 4; j = j + 1 {
+    for mut i := 0; i < 4; i = i + 1 {
+        for mut j := i + 1; j < 4; j = j + 1 {
             if nums[i] == 2 {
                 return [i, j];
             }
@@ -10,8 +10,8 @@ func test_nested_for_simple(nums : []int) -> []int {
 }
 
 func test_nested_for_addition(nums : []int) -> []int {
-    for i := 0; i < 4; i = i + 1 {
-        for j := i + 1; j < 4; j = j + 1 {
+    for mut i := 0; i < 4; i = i + 1 {
+        for mut j := i + 1; j < 4; j = j + 1 {
             if nums[i] + nums[j] == 9 {
                 return [i, j];
             }

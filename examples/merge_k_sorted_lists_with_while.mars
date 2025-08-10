@@ -40,7 +40,7 @@ func main() {
     result := merge_two_sorted_arrays(arr1, arr2);
     
     println("Merged array:");
-    for i := 0; i < len(result); i = i + 1 {
+    for mut i := 0; i < len(result); i = i + 1 {
         println(result[i]);
     }
 } 

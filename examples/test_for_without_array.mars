@@ -1,5 +1,5 @@
 func test_for_without_array() -> int {
-    for i := 0; i < 4; i = i + 1 {
+    for mut i := 0; i < 4; i = i + 1 {
         if i == 2 {
             return i;
         }

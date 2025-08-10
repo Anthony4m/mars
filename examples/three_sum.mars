@@ -6,9 +6,9 @@ func three_sum(nums : []int) -> []int {
     // For simplicity, we'll return the first valid triplet found
     // In a full implementation, we'd need to return all unique triplets
     
-    for i := 0; i < 4; i = i + 1 {
-        for j := i + 1; j < 4; j = j + 1 {
-            for k := j + 1; k < 4; k = k + 1 {
+    for mut i := 0; i < 4; i = i + 1 {
+        for mut j := i + 1; j < 4; j = j + 1 {
+            for mut k := j + 1; k < 4; k = k + 1 {
                 if nums[i] + nums[j] + nums[k] == 0 {
                     return [i, j, k];
                 }
@@ -20,9 +20,9 @@ func three_sum(nums : []int) -> []int {
 
 func three_sum_brute_force(nums : []int) -> []int {
     // Brute force approach - check all possible triplets
-    for i := 0; i < 4; i = i + 1 {
-        for j := 0; j < 4; j = j + 1 {
-            for k := 0; k < 4; k = k + 1 {
+    for mut i := 0; i < 4; i = i + 1 {
+        for mut j := 0; j < 4; j = j + 1 {
+            for mut k := 0; k < 4; k = k + 1 {
                 // Skip if any indices are the same using nested if statements
                 if i != j {
                     if i != k {
