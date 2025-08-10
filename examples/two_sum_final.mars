@@ -44,7 +44,7 @@ func test_basic_features() -> int {
 // Test function to demonstrate for loops
 func test_for_loop() -> int {
     sum := 0;
-    for i := 0; i < 5; i = i + 1 {
+    for mut i := 0; i < 5; i = i + 1 {
         sum := sum + i;
     }
     return sum;

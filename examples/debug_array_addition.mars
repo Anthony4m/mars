@@ -1,6 +1,6 @@
 func twosum(nums: []int, target: int) -> []int {
-    for i := 0; i < len(nums); i = i + 1 {
-        for j := i + 1; j < len(nums); j = j + 1 {
+    for mut i := 0; i < len(nums); i = i + 1 {
+        for mut j := i + 1; j < len(nums); j = j + 1 {
             if nums[j] == target - nums[i] {
                 return [i, j];
             }

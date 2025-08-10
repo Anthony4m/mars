@@ -7,10 +7,10 @@ func trap(height : []int) -> int {
     mut total_water := 0;
     
     // For each position, find the maximum height to the left and right
-    for i := 1; i < len(height) - 1; i = i + 1 {
+    for mut i := 1; i < len(height) - 1; i = i + 1 {
         // Find max height to the left
         mut max_left := height[0];
-        for j := 1; j < i; j = j + 1 {
+        for mut j := 1; j < i; j = j + 1 {
             if height[j] > max_left {
                 max_left = height[j];
             }
@@ -18,7 +18,7 @@ func trap(height : []int) -> int {
         
         // Find max height to the right
         mut max_right := height[i + 1];
-        for j := i + 2; j < len(height); j = j + 1 {
+        for mut j := i + 2; j < len(height); j = j + 1 {
             if height[j] > max_right {
                 max_right = height[j];
             }

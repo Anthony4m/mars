@@ -10,7 +10,7 @@ func word_break(s : string, word_dict : []string) -> bool {
     }
     
     // Check each word in the dictionary
-    for i := 0; i < len(word_dict); i = i + 1 {
+    for mut i := 0; i < len(word_dict); i = i + 1 {
         word := word_dict[i];
         
         // Check if string starts with this word

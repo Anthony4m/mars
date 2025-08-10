@@ -259,4 +259,10 @@ Mars 1.0 has successfully solved:
 
 **Mars 1.0 is a fully working programming language** with a solid foundation and extensive capabilities. The language can execute complex programs with variables, functions, control flow, arrays, and algorithmic problem solving. All core features are implemented and working, making Mars ready for practical use and further development.
 
+### Stability: 1.0
+
+- Syntax and semantics for 1.0 are frozen.
+- Bugfixes and security updates only on the `1.0-maint` branch.
+- New features go through the 1.x proposals queue (see `docs/proposals/`).
+
 **Mars 1.0: MISSION ACCOMPLISHED** 

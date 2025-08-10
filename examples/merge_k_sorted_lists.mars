@@ -38,7 +38,7 @@ func merge_two_sorted_arrays(arr1 : []int, arr2 : []int) -> []int {
     
     // Return only the used portion
     mut final_result := [];
-    for k := 0; k < result_index; k = k + 1 {
+    for mut k := 0; k < result_index; k = k + 1 {
         final_result = final_result + [result[k]];
     }
     
@@ -57,7 +57,7 @@ func merge_k_sorted_lists(lists : [][]int) -> []int {
     // Merge lists in pairs (divide and conquer approach)
     mut merged := lists[0];
     
-    for i := 1; i < len(lists); i = i + 1 {
+    for mut i := 1; i < len(lists); i = i + 1 {
         merged = merge_two_sorted_arrays(merged, lists[i]);
     }
     

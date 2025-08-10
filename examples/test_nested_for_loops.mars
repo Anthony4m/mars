@@ -1,5 +1,5 @@
 func test_single_for(nums : []int) -> []int {
-    for i := 0; i < 4; i = i + 1 {
+    for mut i := 0; i < 4; i = i + 1 {
         if nums[i] == 2 {
             return [i, 0];
         }
@@ -8,8 +8,8 @@ func test_single_for(nums : []int) -> []int {
 }
 
 func test_nested_for(nums : []int) -> []int {
-    for i := 0; i < 4; i = i + 1 {
-        for j := i + 1; j < 4; j = j + 1 {
+    for mut i := 0; i < 4; i = i + 1 {
+        for mut j := i + 1; j < 4; j = j + 1 {
             if nums[i] == 2 {
                 return [i, j];
             }

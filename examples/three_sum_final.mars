@@ -3,9 +3,9 @@
 
 func three_sum(nums : []int) -> [][]int {
     // Brute force approach with three nested loops
-    for i := 0; i < len(nums); i = i + 1 {
-        for j := i + 1; j < len(nums); j = j + 1 {
-            for k := j + 1; k < len(nums); k = k + 1 {
+    for mut i := 0; i < len(nums); i = i + 1 {
+        for mut j := i + 1; j < len(nums); j = j + 1 {
+            for mut k := j + 1; k < len(nums); k = k + 1 {
                 if nums[i] + nums[j] + nums[k] == 0 {
                     return [[nums[i], nums[j], nums[k]]];
                 }

@@ -43,6 +43,40 @@ func TestReturnStatements(t *testing.T) {
 	}
 }
 
+func TestForInitMutabilityParsing(t *testing.T) {
+	cases := []struct {
+		code        string
+		wantMutable bool
+		name        string
+	}{
+		{code: "for i := 0; i < 2; i = i + 1 { }", wantMutable: false, name: "no mut"},
+		{code: "for mut i := 0; i < 2; i = i + 1 { }", wantMutable: true, name: "with mut"},
+	}
+	for _, tc := range cases {
+		l := lexer.New(tc.code)
+		p := NewParser(l)
+		prog := p.ParseProgram()
+		checkParserErrors(t, p)
+		if len(prog.Declarations) != 1 {
+			t.Fatalf("%s: expected 1 top-level decl, got %d", tc.name, len(prog.Declarations))
+		}
+		forStmt, ok := prog.Declarations[0].(*ast.ForStatement)
+		if !ok {
+			t.Fatalf("%s: top-level decl not *ast.ForStatement, got %T", tc.name, prog.Declarations[0])
+		}
+		if forStmt.Init == nil {
+			t.Fatalf("%s: for.Init is nil", tc.name)
+		}
+		varDecl, ok := forStmt.Init.(*ast.VarDecl)
+		if !ok {
+			t.Fatalf("%s: for.Init not *ast.VarDecl, got %T", tc.name, forStmt.Init)
+		}
+		if varDecl.Mutable != tc.wantMutable {
+			t.Fatalf("%s: Mutable mismatch: want %v, got %v", tc.name, tc.wantMutable, varDecl.Mutable)
+		}
+	}
+}
+
 func TestIdentifierExpression(t *testing.T) {
 	input := "x := foobar;"
 

@@ -338,6 +338,11 @@ func findMedianSortedArray(nums1: []int, nums2: []int) -> float {
 1. **Complete Algorithmic Support**: All major algorithmic patterns working
 2. **Hard Problem Capability**: Successfully solved LeetCode Hard problems
 3. **Production Ready**: Language is fully working for real-world algorithms
+
+### Stability: 1.0
+
+- Mars 1.0 syntax/semantics are frozen.
+- Bugfixes only on `1.0-maint`; new features via 1.x proposals.
 4. **Extensible Architecture**: Ready for more complex algorithms
 5. **Performance**: Efficient execution of complex algorithms
 

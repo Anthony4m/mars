@@ -3,9 +3,9 @@
 
 func three_sum_simple(nums : []int) -> []int {
     // Simple approach: check all combinations with i < j < k
-    for i := 0; i < 4; i = i + 1 {
-        for j := i + 1; j < 4; j = j + 1 {
-            for k := j + 1; k < 4; k = k + 1 {
+    for mut i := 0; i < 4; i = i + 1 {
+        for mut j := i + 1; j < 4; j = j + 1 {
+            for mut k := j + 1; k < 4; k = k + 1 {
                 if nums[i] + nums[j] + nums[k] == 0 {
                     return [i, j, k];
                 }
@@ -17,9 +17,9 @@ func three_sum_simple(nums : []int) -> []int {
 
 func three_sum_with_variables(nums : []int) -> []int {
     // Using variables to make the logic clearer
-    for i := 0; i < 4; i = i + 1 {
-        for j := i + 1; j < 4; j = j + 1 {
-            for k := j + 1; k < 4; k = k + 1 {
+    for mut i := 0; i < 4; i = i + 1 {
+        for mut j := i + 1; j < 4; j = j + 1 {
+            for mut k := j + 1; k < 4; k = k + 1 {
                 sum := nums[i] + nums[j] + nums[k];
                 if sum == 0 {
                     return [i, j, k];

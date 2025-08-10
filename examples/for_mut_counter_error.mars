@@ -1,6 +1,6 @@
 func main() {
   mut sum := 0;
-  for i := 0; i < 3; i = i + 1 {
+  for mut i := 0; i < 3; i = i + 1 {
     sum = sum + i;
   }
   println(sum);

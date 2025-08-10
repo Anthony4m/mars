@@ -3,8 +3,8 @@
 
 // Brute force approach - tests nested loops and array indexing
 func two_sum_brute_force(nums : []int, target : int) -> []int {
-    for i := 0; i < len(nums); i = i + 1 {
-        for j := i + 1; j < len(nums); j = j + 1 {
+    for mut i := 0; i < len(nums); i = i + 1 {
+        for mut j := i + 1; j < len(nums); j = j + 1 {
             if nums[i] + nums[j] == target {
                 return [i, j];
             }
@@ -49,52 +49,52 @@ func two_sum_simple(num1 : int, num2 : int, num3 : int, num4 : int, target : int
 }
 
 func main() {
-    log("=== Mars 1.0 Two Sum Test ===");
+    println("=== Mars 1.0 Two Sum Test ===");
     
     // Test case 1: [2,7,11,15], target = 9
-    log("Test 1: [2,7,11,15], target = 9");
-    log("Expected: [0,1]");
+    println("Test 1: [2,7,11,15], target = 9");
+    println("Expected: [0,1]");
     
     nums1 := [2, 7, 11, 15];
     target1 := 9;
     
     result1 := two_sum_brute_force(nums1, target1);
-    log("Brute force result: ");
-    log(result1);
+    println("Brute force result: ");
+    println(result1);
     
     simple_result1 := two_sum_simple(2, 7, 11, 15, 9);
-    log("Simple approach result: ");
-    log(simple_result1);
+    println("Simple approach result: ");
+    println(simple_result1);
     
     // Test case 2: [3,2,4], target = 6
-    log("Test 2: [3,2,4], target = 6");
-    log("Expected: [1,2]");
+    println("Test 2: [3,2,4], target = 6");
+    println("Expected: [1,2]");
     
     nums2 := [3, 2, 4];
     target2 := 6;
     
     result2 := two_sum_brute_force(nums2, target2);
-    log("Brute force result: ");
-    log(result2);
+    println("Brute force result: ");
+    println(result2);
     
     simple_result2 := two_sum_simple(3, 2, 4, 0, 6);
-    log("Simple approach result: ");
-    log(simple_result2);
+    println("Simple approach result: ");
+    println(simple_result2);
     
     // Test case 3: [3,3], target = 6
-    log("Test 3: [3,3], target = 6");
-    log("Expected: [0,1]");
+    println("Test 3: [3,3], target = 6");
+    println("Expected: [0,1]");
     
     nums3 := [3, 3];
     target3 := 6;
     
     result3 := two_sum_brute_force(nums3, target3);
-    log("Brute force result: ");
-    log(result3);
+    println("Brute force result: ");
+    println(result3);
     
     simple_result3 := two_sum_simple(3, 3, 0, 0, 6);
-    log("Simple approach result: ");
-    log(simple_result3);
+    println("Simple approach result: ");
+    println(simple_result3);
     
-    log("=== Mars 1.0 Test Complete ===");
+    println("=== Mars 1.0 Test Complete ===");
 } 
